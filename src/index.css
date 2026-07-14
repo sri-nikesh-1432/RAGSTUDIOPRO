@@ -107,13 +107,7 @@ body {
     animation: slideUp 0.5s ease-out forwards;
   }
 
-  .no-drag {
-    -webkit-app-region: no-drag;
-  }
 
-  .drag {
-    -webkit-app-region: drag;
-  }
 
   /* Shimmer effect */
   .shimmer {
@@ -177,42 +171,7 @@ body {
   50% { opacity: 0.06; }
 }
 
-/* ─── Title Bar (Electron) ──────────────────────────────────────── */
-.titlebar {
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 10px;
-  background: rgba(6, 6, 11, 0.95);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  -webkit-app-region: drag;
-  user-select: none;
-}
 
-.titlebar-button {
-  -webkit-app-region: no-drag;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  color: #64748b;
-}
-
-.titlebar-button:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #f1f5f9;
-}
-
-.titlebar-button.close:hover {
-  background: rgba(239, 68, 68, 0.85);
-  color: white;
-}
 
 /* ─── Plotly Overrides ──────────────────────────────────────────── */
 .js-plotly-plot .plotly .modebar {
