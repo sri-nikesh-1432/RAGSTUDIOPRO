@@ -2,8 +2,8 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, FileText, Layers, Brain, Database, Search, MessageSquare,
-  Play, ChevronRight, CheckCircle2, AlertCircle, Zap, X, FileCode, Globe,
-  BarChart3, Clock, Download, Settings2
+  ChevronRight, CheckCircle2, AlertCircle, Zap, X, FileCode, Globe,
+  BarChart3, Clock
 } from 'lucide-react';
 import { cn, formatNumber } from '../lib/utils';
 import { useAppStore } from '../store/appStore';
@@ -132,8 +132,8 @@ function PipelineAnalytics({ parseResult, chunkResult, embedResult, retrievalRes
 }
 
 // ─── Step 7: Full Pipeline Analytics ───────────────────────────────
-function Step7Analytics({ parseResult, chunkResult, embedResult, retrievalResults, generationResult, buildTimeMs, chatMessages }: {
-  parseResult: any; chunkResult: any; embedResult: any; retrievalResults: any[]; generationResult: any; buildTimeMs: number; chatMessages: any[];
+function Step7Analytics({ parseResult, chunkResult, embedResult, retrievalResults, generationResult, buildTimeMs, chatMessages, stepTimings }: {
+  parseResult: any; chunkResult: any; embedResult: any; retrievalResults: any[]; generationResult: any; buildTimeMs: number; chatMessages: any[]; stepTimings: Record<string, number>;
 }) {
   const [activeTab, setActiveTab] = useState<'overview' | 'chunks' | 'retrieval' | 'queries'>('overview');
 
@@ -165,10 +165,11 @@ function Step7Analytics({ parseResult, chunkResult, embedResult, retrievalResult
             <h4 className="text-xs font-semibold text-text-primary mb-3">Pipeline Timing</h4>
             <div className="space-y-2">
               {[
-                { label: 'Parse', time: 0, color: 'bg-blue-500' },
-                { label: 'Chunk', time: chunkResult?.processing_time_ms || 0, color: 'bg-cyan-500' },
-                { label: 'Embed', time: embedResult?.inference_time_ms || 0, color: 'bg-teal-500' },
-                { label: 'Retrieve', time: retrievalResults.length > 0 ? 50 : 0, color: 'bg-green-500' },
+                { label: 'Parse', time: parseResult?.parse_time_ms || stepTimings?.parse || 0, color: 'bg-blue-500' },
+                { label: 'Chunk', time: chunkResult?.processing_time_ms || stepTimings?.chunk || 0, color: 'bg-cyan-500' },
+                { label: 'Embed', time: embedResult?.inference_time_ms || stepTimings?.embed || 0, color: 'bg-teal-500' },
+                { label: 'Store', time: stepTimings?.store || 0, color: 'bg-emerald-500' },
+                { label: 'Retrieve', time: retrievalResults.length > 0 ? (retrievalResults[0]?.timing?.total_ms || 0) : 0, color: 'bg-green-500' },
                 { label: 'Generate', time: generationResult?.total_time_ms || 0, color: 'bg-yellow-500' },
               ].map((item) => {
                 const maxTime = Math.max(buildTimeMs, 1);
@@ -312,8 +313,7 @@ function Step7Analytics({ parseResult, chunkResult, embedResult, retrievalResult
                 </div>
               ))}
             </div>
-          ) : (
-            <p className="center text-text-tertiary text-sm py-8">No queries yet. Build the pipeline and start chatting.</p>
+          ) : (              <p className="text-center text-text-tertiary text-sm py-8">No queries yet. Build the pipeline and start chatting.</p>
           )}
         </div>
       )}
@@ -382,6 +382,8 @@ export default function RAGBuilder() {
   const [ollamaModels, setOllamaModels] = useState<string[]>([]);
   const [ollamaAvailable, setOllamaAvailable] = useState(true);
   const [stepProcessing, setStepProcessing] = useState<Record<number, boolean>>({});
+  const [pipelineStartTime, setPipelineStartTime] = useState<number>(0);
+  const [stepTimings, setStepTimings] = useState<Record<string, number>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check backend connection and Ollama on mount
@@ -417,6 +419,7 @@ export default function RAGBuilder() {
 
   const completeIngestion = () => {
     if (store.parsedFiles.length > 0 || store.currentText.trim()) {
+      setPipelineStartTime(Date.now());
       setActiveStep(1);
     }
   };
@@ -426,9 +429,10 @@ export default function RAGBuilder() {
     if (!store.currentText) { setError('No text to chunk. Upload a file first.'); return; }
     setStepProcessing(p => ({ ...p, 1: true }));
     setError(null);
+    const start = Date.now();
     try {
       const result = await chunkAPI.chunk({ text: store.currentText, method: store.chunkMethod, chunk_size: store.chunkSize, overlap: store.chunkOverlap });
-      if (result.success) { store.setChunks(result.chunks); setChunkResult(result); setActiveStep(2); }
+      if (result.success) { store.setChunks(result.chunks); setChunkResult(result); setStepTimings(t => ({ ...t, chunk: Date.now() - start })); setActiveStep(2); }
       else setError(result.error || 'Chunking failed');
     } catch (err: any) { setError(err.message); }
     finally { setStepProcessing(p => ({ ...p, 1: false })); }
@@ -439,10 +443,11 @@ export default function RAGBuilder() {
     if (store.chunks.length === 0) { setError('No chunks to embed. Complete chunking first.'); return; }
     setStepProcessing(p => ({ ...p, 2: true }));
     setError(null);
+    const start = Date.now();
     try {
       const chunkTexts = store.chunks.map((c: any) => c.text);
       const embeddings = await embedAPI.generate({ texts: chunkTexts, model: store.embeddingModel });
-      if (embeddings.success) { setEmbedResult(embeddings); setActiveStep(3); }
+      if (embeddings.success) { setEmbedResult(embeddings); setStepTimings(t => ({ ...t, embed: Date.now() - start })); setActiveStep(3); }
       else setError(embeddings.error || 'Embedding failed');
     } catch (err: any) { setError(err.message); }
     finally { setStepProcessing(p => ({ ...p, 2: false })); }
@@ -453,12 +458,14 @@ export default function RAGBuilder() {
     if (!embedResult) { setError('No embeddings to store. Complete embedding first.'); return; }
     setStepProcessing(p => ({ ...p, 3: true }));
     setError(null);
+    const start = Date.now();
     try {
       const chunkTexts = store.chunks.map((c: any) => c.text);
       const ids = store.chunks.map((c: any) => c.id);
       const metadata = store.chunks.map((c: any) => c.metadata);
       const result = await vectorAPI.add({ ids, embeddings: embedResult.embeddings, texts: chunkTexts, metadata, collection: store.collectionName, store_type: store.vectorStore, dimensions: embedResult.dimensions });
-      setStoreResult(result); setBuildComplete(true); setActiveStep(4);
+      const storeTime = Date.now() - start;
+      setStoreResult(result); setBuildComplete(true); setBuildTimeMs(Date.now() - (pipelineStartTime || Date.now())); setStepTimings(t => ({ ...t, store: storeTime })); setActiveStep(4);
     } catch (err: any) { setError(err.message); }
     finally { setStepProcessing(p => ({ ...p, 3: false })); }
   };
@@ -697,7 +704,7 @@ export default function RAGBuilder() {
 
             {/* Step 7: Analytics */}
             <PipelineStepCard step={steps[6]} index={6} isActive={activeStep === 6} isComplete={false} onClick={() => setActiveStep(6)}>
-              <Step7Analytics parseResult={parseResult} chunkResult={chunkResult} embedResult={embedResult} retrievalResults={retrievalResults} generationResult={generationResult} buildTimeMs={buildTimeMs} chatMessages={store.chatMessages} />
+              <Step7Analytics parseResult={parseResult} chunkResult={chunkResult} embedResult={embedResult} retrievalResults={retrievalResults} generationResult={generationResult} buildTimeMs={buildTimeMs} chatMessages={store.chatMessages} stepTimings={stepTimings} />
             </PipelineStepCard>
           </div>
 
