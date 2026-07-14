@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  BarChart3, TrendingUp, Clock, Target, Zap, Activity,
-  Cpu, HardDrive, MemoryStick, ArrowUpRight, ArrowDownRight,
-  RefreshCcw, AlertCircle, Database, Layers, Brain
+  BarChart3, Clock, Target, Zap, Activity,
+  Cpu, HardDrive, MemoryStick,
+  RefreshCcw, AlertCircle, Database, Layers
 } from 'lucide-react';
 import { cn, formatNumber } from '../lib/utils';
 import { analyticsAPI, pipelineAPI } from '../services/api';
@@ -151,9 +151,12 @@ export default function Analytics() {
         pipelineAPI.runs(),
       ]);
 
-      if (sys.status === 'fulfilled') setSystemInfo(sys.value);
-      if (session.status === 'fulfilled') setSessionInfo(session.value);
-      if (runs.status === 'fulfilled') setPipelineRuns(runs.value.runs || []);
+      if (sys.status === 'fulfilled') setSystemInfo(sys.value as SystemInfo);
+      if (session.status === 'fulfilled') setSessionInfo(session.value as SessionInfo);
+      if (runs.status === 'fulfilled') {
+        const runsData = runs.value as { runs?: PipelineRun[] };
+        setPipelineRuns(runsData.runs || []);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load analytics');
     } finally {
