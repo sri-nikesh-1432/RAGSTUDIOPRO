@@ -2,9 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, FileText, Layers, Brain, Database, Search, MessageSquare,
-  Play, Settings2, ChevronDown, ChevronRight, Trash2, Plus,
-  CheckCircle2, AlertCircle, Clock, Zap, ArrowRight, Download,
-  FolderOpen, X, FileCode, FileImage, Globe, RefreshCcw
+  Play, ChevronRight, CheckCircle2, AlertCircle, Zap, X, FileCode, Globe, BarChart3
 } from 'lucide-react';
 import { cn, formatNumber } from '../lib/utils';
 import { useAppStore } from '../store/appStore';
@@ -57,6 +55,76 @@ const llmProviders = [
   { id: 'ollama', name: 'Ollama (Local)', models: ['llama3.2', 'gemma2', 'mistral', 'phi3', 'qwen2.5'], local: true },
   { id: 'openai', name: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'], local: false },
 ];
+
+// ─── Pipeline Analytics Panel ─────────────────────────────────────
+function PipelineAnalytics({ parseResult, chunkResult, embedResult, retrievalResults, generationResult, buildComplete, buildTimeMs }: {
+  parseResult: any;
+  chunkResult: any;
+  embedResult: any;
+  retrievalResults: any[];
+  generationResult: any;
+  buildComplete: boolean;
+  buildTimeMs: number;
+}) {
+  const metrics = [];
+
+  if (parseResult) {
+    metrics.push({ label: 'Characters', value: formatNumber(parseResult.characters || 0), icon: FileText, color: 'text-blue-400' });
+    metrics.push({ label: 'Words', value: formatNumber(parseResult.words || 0), icon: FileText, color: 'text-cyan-400' });
+  }
+  if (chunkResult) {
+    metrics.push({ label: 'Chunks', value: chunkResult.count || 0, icon: Layers, color: 'text-teal-400' });
+    metrics.push({ label: 'Avg Chunk Size', value: `${Math.round(chunkResult.avg_chunk_size || 0)} chars`, icon: Layers, color: 'text-emerald-400' });
+    if (chunkResult.processing_time_ms) {
+      metrics.push({ label: 'Chunk Time', value: `${chunkResult.processing_time_ms.toFixed(0)}ms`, icon: Clock, color: 'text-amber-400' });
+    }
+  }
+  if (embedResult) {
+    metrics.push({ label: 'Embeddings', value: embedResult.count || 0, icon: Brain, color: 'text-violet-400' });
+    metrics.push({ label: 'Dimensions', value: `${embedResult.dimensions || 0}d`, icon: Brain, color: 'text-purple-400' });
+    if (embedResult.inference_time_ms) {
+      metrics.push({ label: 'Embed Time', value: `${embedResult.inference_time_ms.toFixed(0)}ms`, icon: Clock, color: 'text-orange-400' });
+    }
+  }
+  if (retrievalResults.length > 0) {
+    const avgScore = retrievalResults.reduce((s, r) => s + (r.score || 0), 0) / retrievalResults.length;
+    metrics.push({ label: 'Results', value: retrievalResults.length, icon: Search, color: 'text-green-400' });
+    metrics.push({ label: 'Avg Score', value: `${(avgScore * 100).toFixed(1)}%`, icon: Search, color: 'text-lime-400' });
+  }
+  if (generationResult) {
+    metrics.push({ label: 'Tokens', value: generationResult.total_tokens || 0, icon: MessageSquare, color: 'text-yellow-400' });
+    if (generationResult.total_time_ms) {
+      metrics.push({ label: 'Gen Time', value: `${generationResult.total_time_ms.toFixed(0)}ms`, icon: Clock, color: 'text-rose-400' });
+    }
+  }
+  if (buildComplete && buildTimeMs > 0) {
+    metrics.push({ label: 'Total Time', value: `${(buildTimeMs / 1000).toFixed(1)}s`, icon: Zap, color: 'text-accent-primary' });
+  }
+
+  if (metrics.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      className="bg-bg-secondary rounded-xl border border-border-primary p-4"
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <BarChart3 className="w-4 h-4 text-accent-primary" />
+        <h3 className="text-sm font-semibold text-text-primary">Pipeline Analytics</h3>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        {metrics.map((m) => (
+          <div key={m.label} className="bg-bg-elevated rounded-lg p-2.5 text-center">
+            <m.icon className={cn('w-3.5 h-3.5 mx-auto mb-1', m.color)} />
+            <div className="text-sm font-bold text-text-primary">{m.value}</div>
+            <div className="text-[9px] text-text-tertiary">{m.label}</div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
 
 // ─── Pipeline Step Component ───────────────────────────────────────
 function PipelineStepCard({
@@ -123,9 +191,9 @@ export default function RAGBuilder() {
   const [activeStep, setActiveStep] = useState(0);
   const [isBuilding, setIsBuilding] = useState(false);
   const [buildComplete, setBuildComplete] = useState(false);
+  const [buildTimeMs, setBuildTimeMs] = useState(0);
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [pipelineResult, setPipelineResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [parseResult, setParseResult] = useState<any>(null);
   const [chunkResult, setChunkResult] = useState<any>(null);
@@ -174,20 +242,6 @@ export default function RAGBuilder() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [store]);
 
-  // ─── Manual Text Input ────────────────────────────────────────
-  const handleTextSubmit = async () => {
-    if (!store.currentText.trim()) return;
-    setError(null);
-    try {
-      const result = await parseAPI.parseText(store.currentText, 'manual_input');
-      if (result.success) {
-        setParseResult(result);
-      }
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
   // ─── Chunk Text ───────────────────────────────────────────────
   const handleChunk = async () => {
     if (!store.currentText) return;
@@ -219,9 +273,9 @@ export default function RAGBuilder() {
 
     setIsBuilding(true);
     setError(null);
-    setPipelineResult(null);
     setRetrievalResults([]);
     setGenerationResult(null);
+    const startTime = Date.now();
 
     try {
       // Step 1: Chunk
@@ -261,6 +315,7 @@ export default function RAGBuilder() {
       });
 
       setBuildComplete(true);
+      setBuildTimeMs(Date.now() - startTime);
       setActiveStep(4);
     } catch (err: any) {
       setError(err.message);
@@ -396,7 +451,18 @@ export default function RAGBuilder() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="max-w-7xl mx-auto px-6 py-6 space-y-4">
+        {/* Pipeline Analytics - Shows real-time metrics */}
+        <PipelineAnalytics
+          parseResult={parseResult}
+          chunkResult={chunkResult}
+          embedResult={embedResult}
+          retrievalResults={retrievalResults}
+          generationResult={generationResult}
+          buildComplete={buildComplete}
+          buildTimeMs={buildTimeMs}
+        />
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Pipeline Configuration */}
           <div className="lg:col-span-2 space-y-3">
