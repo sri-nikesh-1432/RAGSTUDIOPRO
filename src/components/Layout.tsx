@@ -2,9 +2,9 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Brain, BarChart3, Cpu,
-  Home, ChevronLeft, ChevronRight, Minimize2, Maximize2, X, Zap,
+  Home, ChevronLeft, ChevronRight, Zap,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { cn } from '../lib/utils';
 
 const navItems = [
@@ -19,46 +19,9 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
-  const [isElectron, setIsElectron] = useState(false);
-
-  useEffect(() => {
-    setIsElectron(typeof window !== 'undefined' && !!(window as any).electronAPI);
-  }, []);
 
   return (
     <div className="h-screen flex flex-col bg-bg-primary overflow-hidden">
-      {/* Title Bar (Electron) */}
-      {isElectron && (
-        <div className="titlebar">
-          <div className="flex items-center gap-2.5 px-3">
-            <div className="w-5 h-5 rounded-md bg-gradient-to-br from-accent-primary to-accent-dim flex items-center justify-center">
-              <Zap className="w-3 h-3 text-white" />
-            </div>
-            <span className="text-xs font-semibold text-text-secondary">RAG Studio Pro</span>
-          </div>
-          <div className="flex items-center gap-0.5 no-drag">
-            <button
-              className="titlebar-button"
-              onClick={() => (window as any).electronAPI?.minimize()}
-            >
-              <Minimize2 className="w-3.5 h-3.5" />
-            </button>
-            <button
-              className="titlebar-button"
-              onClick={() => (window as any).electronAPI?.maximize()}
-            >
-              <Maximize2 className="w-3.5 h-3.5" />
-            </button>
-            <button
-              className="titlebar-button close"
-              onClick={() => (window as any).electronAPI?.close()}
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <motion.aside
