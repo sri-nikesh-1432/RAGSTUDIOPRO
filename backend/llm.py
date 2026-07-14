@@ -400,3 +400,44 @@ class LLMGenerator:
     def get_free_providers(self) -> Dict[str, Any]:
         """Get info about free cloud providers."""
         return self.free_cloud.get_provider_info()
+
+    def generate_free(self, query: str, context: List[str] = None, model: str = "mistralai/Mistral-7B-Instruct-v0.3") -> Dict[str, Any]:
+        """Generate using Hugging Face free inference API (no API key needed)."""
+        prompt = build_rag_prompt(query, context or [])
+        start_time = time.time()
+        
+        try:
+            resp = httpx.post(
+                f"https://api-inference.huggingface.co/models/{model}",
+                json={"inputs": prompt, "parameters": {"max_new_tokens": 512, "temperature": 0.7}},
+                timeout=120,
+            )
+            elapsed = (time.time() - start_time) * 1000
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                if isinstance(data, list) and len(data) > 0:
+                    answer = data[0].get("generated_text", "")
+                    # Remove the prompt from the response
+                    if prompt in answer:
+                        answer = answer.split(prompt)[-1].strip()
+                    return {
+                        "success": True,
+                        "answer": answer,
+                        "model": model,
+                        "provider": "huggingface-free",
+                        "prompt_tokens": 0,
+                        "completion_tokens": 0,
+                        "total_tokens": 0,
+                        "generation_time_ms": elapsed,
+                        "total_time_ms": elapsed,
+                    }
+                else:
+                    return {"success": False, "error": f"Unexpected response format", "total_time_ms": elapsed}
+            elif resp.status_code == 503:
+                # Model is loading
+                return {"success": False, "error": "Model is loading, please try again in 30 seconds", "total_time_ms": elapsed}
+            else:
+                return {"success": False, "error": f"HF API error {resp.status_code}: {resp.text[:200]}", "total_time_ms": elapsed}
+        except Exception as e:
+            return {"success": False, "error": str(e), "total_time_ms": (time.time() - start_time) * 1000}

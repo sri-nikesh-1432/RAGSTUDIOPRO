@@ -87,6 +87,15 @@ const freeProviders = [
 
 const openaiProvider = { id: 'openai', name: 'OpenAI', description: 'GPT models via API (paid)', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'] };
 
+// ─── Truly Free Models (No API Key Needed) ────────────────────────
+const freeModels = [
+  { id: 'mistralai/Mistral-7B-Instruct-v0.3', name: 'Mistral 7B', desc: 'Fast, high quality', speed: 'Medium' },
+  { id: 'HuggingFaceH4/zephyr-7b-beta', name: 'Zephyr 7B', desc: 'Chat-optimized', speed: 'Medium' },
+  { id: 'microsoft/Phi-3-mini-4k-instruct', name: 'Phi-3 Mini', desc: 'Small & fast', speed: 'Fast' },
+  { id: 'google/gemma-1.1-7b-it', name: 'Gemma 7B', desc: 'Google quality', speed: 'Medium' },
+  { id: 'meta-llama/Llama-2-7b-chat-hf', name: 'Llama 2 7B', desc: 'Meta classic', speed: 'Medium' },
+];
+
 // ─── Action Button Component ───────────────────────────────────────
 function ActionButton({ onClick, disabled, loading, children, variant = 'primary' }: {
   onClick: () => void; disabled?: boolean; loading?: boolean; children: React.ReactNode; variant?: 'primary' | 'success' | 'secondary';
@@ -414,6 +423,7 @@ export default function RAGBuilder() {
   const [stepProcessing, setStepProcessing] = useState<Record<number, boolean>>({});
   const [pipelineStartTime, setPipelineStartTime] = useState<number>(0);
   const [stepTimings, setStepTimings] = useState<Record<string, number>>({});
+  const [freeModel, setFreeModel] = useState(freeModels[0].id);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check backend connection and Ollama on mount
@@ -515,7 +525,7 @@ export default function RAGBuilder() {
   };
 
   // ─── Step 6: Send Query (Retrieve + Generate) ─────────────────
-  const sendQuery = async () => {
+  const sendQuery = async (useFree = false) => {
     if (!query.trim() || !buildComplete) return;
     const userMsg = { role: 'user' as const, content: query };
     store.addChatMessage(userMsg); setQuery(''); setIsSearching(true); setError(null);
@@ -524,12 +534,16 @@ export default function RAGBuilder() {
       if (retrieval.success) {
         setRetrievalResults(retrieval.results); store.incrementQueries();
         const context = retrieval.results.map((r: any) => r.text);
-        const generation = await llmAPI.generate({ query, context, provider: store.llmProvider, model: store.llmModel, api_key: store.openaiApiKey || undefined });
+        let generation;
+        if (useFree) {
+          generation = await llmAPI.generateFree({ query, context, model: freeModel });
+        } else {
+          generation = await llmAPI.generate({ query, context, provider: store.llmProvider, model: store.llmModel, api_key: store.openaiApiKey || undefined });
+        }
         if (generation.success) {
           setGenerationResult(generation);
           store.addChatMessage({ role: 'assistant', content: generation.answer, metadata: { chunks: retrieval.results.length, sources: retrieval.results.map((r: any) => r.metadata?.source || 'unknown').filter((s: string, i: number, a: string[]) => a.indexOf(s) === i), latency: `${(retrieval.timing.total_ms / 1000).toFixed(2)}s`, confidence: retrieval.results[0]?.score || 0 } });
         } else {
-          // Show a more helpful error message
           let errorMsg = generation.error || 'LLM not available';
           if (errorMsg.includes('not found') || errorMsg.includes('404')) {
             if (store.llmProvider === 'ollama') {
@@ -699,6 +713,29 @@ export default function RAGBuilder() {
             {/* Step 6: Generation */}
             <PipelineStepCard step={steps[5]} index={5} isActive={activeStep === 5} isComplete={!!generationResult} onClick={() => setActiveStep(5)}>
               <div className="bg-bg-secondary rounded-xl border border-border-primary p-4 space-y-4">
+                {/* Category 0: Truly Free Models (No API Key) */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <h4 className="text-xs font-semibold text-green-400">Free Models (No API Key)</h4>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-green-500/10 text-green-400 font-bold">Zero Setup</span>
+                  </div>
+                  <p className="text-[10px] text-text-tertiary mb-2">Select a model and start generating — no signup, no API key needed</p>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {freeModels.map((m) => (
+                      <button key={m.id} onClick={() => setFreeModel(m.id)} className={cn('px-3 py-1.5 rounded-lg text-xs transition-all border', freeModel === m.id ? 'bg-green-500/10 border-green-500/30 text-green-400 font-medium' : 'bg-bg-elevated border-border-primary text-text-secondary hover:text-text-primary')}>{m.name}</button>
+                    ))}
+                  </div>
+                  <button onClick={() => sendQuery(true)} disabled={!buildComplete || !query.trim() || isSearching}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium text-sm hover:shadow-lg hover:shadow-green-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    {isSearching && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                    Generate with Free Model
+                  </button>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-border-primary" />
+
                 {/* Category 1: Free Cloud Models */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -808,6 +845,16 @@ export default function RAGBuilder() {
                     <div>🤖 {generationResult.model} via {generationResult.provider}</div>
                     <div>📊 Tokens: {generationResult.total_tokens} • Time: {generationResult.total_time_ms?.toFixed(0)}ms</div>
                   </div>
+                )}
+
+                {/* Free Model Generate Button for non-free providers */}
+                {store.llmProvider !== 'free' && store.llmProvider && (
+                  <>
+                    <div className="border-t border-border-primary" />
+                    <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3">
+                      <p className="text-[10px] text-green-400 mb-2">💡 Want to try without API key? Use the Free Model at the top!</p>
+                    </div>
+                  </>
                 )}
               </div>
             </PipelineStepCard>

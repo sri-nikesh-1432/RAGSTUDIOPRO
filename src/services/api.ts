@@ -237,6 +237,15 @@ export const llmAPI = {
       method: 'POST',
       body: JSON.stringify(params),
     }),
+  generateFree: (params: {
+    query: string;
+    context?: string[];
+    model?: string;
+  }) =>
+    apiFetch<GenerationResult>('/llm/generate-free', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
   ollamaStatus: () => apiFetch<{ available: boolean; models: any[] }>('/llm/ollama/status'),
   ollamaModels: () => apiFetch<{ available: boolean; models: any[] }>('/llm/ollama/models'),
 };

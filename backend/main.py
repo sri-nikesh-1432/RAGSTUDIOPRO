@@ -503,6 +503,21 @@ async def free_providers():
     return llm_generator.get_free_providers()
 
 
+class FreeGenerateRequest(BaseModel):
+    query: str
+    context: List[str] = []
+    model: str = "mistralai/Mistral-7B-Instruct-v0.3"
+
+@app.post("/api/llm/generate-free")
+async def generate_free(request: FreeGenerateRequest):
+    """Generate using free HF inference API (no API key needed)."""
+    return llm_generator.generate_free(
+        query=request.query,
+        context=request.context,
+        model=request.model,
+    )
+
+
 # ═══════════════════════════════════════════════════════════════════
 #  FULL RAG PIPELINE
 # ═══════════════════════════════════════════════════════════════════
