@@ -408,7 +408,7 @@ export default function RAGBuilder() {
                   ref={fileInputRef}
                   type="file"
                   multiple
-                  accept=".pdf,.txt,.csv,.md,.html,.json,.docx,.xlsx,.pptx"
+                  accept="*/*"
                   onChange={handleFileUpload}
                   className="hidden"
                 />
@@ -418,7 +418,7 @@ export default function RAGBuilder() {
                 >
                   <Upload className="w-10 h-10 text-text-muted mx-auto mb-3" />
                   <p className="text-sm text-text-secondary mb-1">Drop files here or click to upload</p>
-                  <p className="text-xs text-text-tertiary">PDF, DOCX, XLSX, PPTX, CSV, TXT, MD, HTML, JSON</p>
+                  <p className="text-xs text-text-tertiary">Any file type supported</p>
                 </div>
 
                 {/* Manual text input */}

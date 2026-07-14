@@ -537,10 +537,11 @@ function HeroSection() {
           </button>
           <button
             onClick={() => navigate('/builder')}
-            className="group flex items-center gap-2.5 px-7 py-3.5 rounded-xl bg-bg-elevated border border-border-secondary text-text-primary font-semibold text-sm transition-all duration-300 hover:bg-bg-hover hover:border-border-accent btn-premium"
+            className="group flex items-center gap-2.5 px-7 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold text-sm transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/30 btn-premium glow-md"
           >
             <Wrench className="w-4 h-4" />
-            Build RAG Pipeline
+            Start Building
+            <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
           </button>
           <button
             onClick={() => navigate('/playground')}

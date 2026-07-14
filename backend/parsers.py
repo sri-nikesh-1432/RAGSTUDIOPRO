@@ -546,7 +546,7 @@ def parse_file(file_path: str, extract_metadata: bool = True) -> Dict[str, Any]:
 
     parser = parser_map.get(file_type)
     if not parser:
-        # Try reading as text
+        # Try reading as text first (handles most text-based unknown types)
         try:
             text = open(file_path, "r", encoding="utf-8", errors="replace").read()
             return {
@@ -557,12 +557,18 @@ def parse_file(file_path: str, extract_metadata: bool = True) -> Dict[str, Any]:
                 "metadata": file_meta,
                 **_analyze_text(text),
             }
-        except Exception as e:
+        except Exception:
+            # Binary file or unreadable - return success with file info so upload doesn't fail
+            ext = Path(file_path).suffix.lower() or ".unknown"
             return {
-                "success": False,
-                "error": f"Unsupported file type: {file_type}. Error: {e}",
+                "success": True,
+                "text": f"[Binary file: {os.path.basename(file_path)} ({_human_size(file_meta.get('file_size', 0))})]",
                 "file_name": os.path.basename(file_path),
-                "file_type": file_type,
+                "file_type": "binary",
+                "file_size": file_meta.get("file_size", 0),
+                "metadata": {**file_meta, "extension": ext, "binary": True, "note": "Binary file uploaded - text extraction not available for this file type"},
+                "characters": 0,
+                "words": 0,
             }
 
     text, type_metadata = parser(file_path)

@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Brain, Wrench, BarChart3, Cpu,
   Home, ChevronLeft, ChevronRight, Minimize2, Maximize2, X, Zap,
-  Download
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '../lib/utils';
@@ -12,7 +11,6 @@ const navItems = [
   { path: '/', icon: Home, label: 'Home', description: 'Learn RAG from scratch' },
   { path: '/learn', icon: BookOpen, label: 'Learning Center', description: 'Interactive tutorials' },
   { path: '/playground', icon: Brain, label: 'Playground', description: 'Experiment with concepts' },
-  { path: '/builder', icon: Wrench, label: 'RAG Builder', description: 'Build real pipelines' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics', description: 'Performance metrics' },
   { path: '/models', icon: Cpu, label: 'Models', description: 'Manage AI models' },
 ];
@@ -129,28 +127,6 @@ export default function Layout() {
               );
             })}
           </nav>
-
-          {/* Download Button */}
-          {!collapsed && (
-            <div className="px-3 pb-3">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  const downloadUrl = 'https://github.com/sri-nikesh-1432/RAGSTUDIOPRO/releases/latest/download/RAGStudioPro-Setup-1.0.0.exe';
-                  if ((window as any).electronAPI?.openExternal) {
-                    (window as any).electronAPI.openExternal(downloadUrl);
-                  } else {
-                    window.open(downloadUrl, '_blank');
-                  }
-                }}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-accent-primary/10 border border-accent-primary/20 text-accent-secondary text-xs font-medium transition-all hover:bg-accent-primary/20"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Download Desktop App
-              </motion.button>
-            </div>
-          )}
 
           {/* Collapse Toggle */}
           <div className="p-2.5 border-t border-border-primary">
