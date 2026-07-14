@@ -22,10 +22,8 @@ interface SystemInfo {
   cpu_count?: number;
   memory_total_gb?: number;
   memory_used_gb?: number;
-  memory_percent?: number;
   disk_total_gb?: number;
   disk_used_gb?: number;
-  disk_percent?: number;
   python_version?: string;
   platform?: string;
   uptime_seconds?: number;

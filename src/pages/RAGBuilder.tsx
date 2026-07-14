@@ -7,7 +7,7 @@ import {
 import { cn, formatNumber } from '../lib/utils';
 import { useAppStore } from '../store/appStore';
 import {
-  parseAPI, chunkAPI, embedAPI, vectorAPI, retrieveAPI, llmAPI, healthAPI
+  chunkAPI, embedAPI, vectorAPI, retrieveAPI, llmAPI, healthAPI
 } from '../services/api';
 
 // ─── File Types ────────────────────────────────────────────────────
