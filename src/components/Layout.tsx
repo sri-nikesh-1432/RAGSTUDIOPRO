@@ -137,12 +137,11 @@ export default function Layout() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
-                  const exeUrl = 'https://github.com/sri-nikesh-1432/RAGSTUDIOPRO/releases/latest/download/RAGStudioPro-Setup-1.0.0.exe';
-                  const portableUrl = 'https://github.com/sri-nikesh-1432/RAGSTUDIOPRO/releases/latest/download/RAGStudioPro-1.0.0-Portable.exe';
+                  const downloadUrl = 'https://github.com/sri-nikesh-1432/RAGSTUDIOPRO/releases/latest/download/RAGStudioPro-Setup-1.0.0.exe';
                   if ((window as any).electronAPI?.openExternal) {
-                    (window as any).electronAPI.openExternal(exeUrl);
+                    (window as any).electronAPI.openExternal(downloadUrl);
                   } else {
-                    window.open(exeUrl, '_blank');
+                    window.open(downloadUrl, '_blank');
                   }
                 }}
                 className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-accent-primary/10 border border-accent-primary/20 text-accent-secondary text-xs font-medium transition-all hover:bg-accent-primary/20"
