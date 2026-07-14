@@ -76,3 +76,6 @@ models/
 *.onnx
 *.pt
 *.pth
+
+# Local Netlify folder
+.netlify

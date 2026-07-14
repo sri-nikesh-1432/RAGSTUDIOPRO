@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import {
   Zap, BookOpen, Brain, Wrench, BarChart3, ArrowRight,
-  ChevronDown, Play, Sparkles, Layers, Database, Search,
+  ChevronDown, Play, Layers, Database, Search,
   MessageSquare, Cpu, FileText, Lightbulb, Rocket, BrainCircuit
 } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -477,18 +477,6 @@ function HeroSection() {
       </div>
 
       <div className="relative z-10 text-center max-w-5xl mx-auto px-6">
-        {/* Badge */}
-        <motion.div
-          initial={{ opacity: 0, y: 30, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-accent-glow border border-accent-primary/20 mb-8 glow-sm"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-accent-primary" />
-          <span className="text-xs font-medium text-accent-secondary">The Blender for RAG</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent-primary/20 text-accent-primary font-semibold">v1.0</span>
-        </motion.div>
-
         {/* Title */}
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
@@ -681,7 +669,7 @@ function FeatureHighlights() {
     {
       icon: BarChart3,
       title: 'Performance Analytics',
-      description: 'Precision, recall, F1, latency tracking, and system resource monitoring in real-time.',
+      description: 'Track pipeline runs, measure chunk distribution, and monitor system resources in real-time.',
       color: 'from-blue-500 to-cyan-500',
     },
     {

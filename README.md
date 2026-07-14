@@ -1,8 +1,8 @@
 # RAG Studio Pro
 
-> **Understand. Build. Visualize. Optimize.**
+**Understand. Build. Visualize. Optimize.**
 
-RAG Studio Pro is an interactive platform for learning and building Retrieval-Augmented Generation systems. It takes you from zero knowledge of RAG all the way to building production-ready pipelines — all in one place, right in your browser or as a desktop app.
+RAG Studio Pro is an interactive platform for learning and building Retrieval-Augmented Generation systems. It takes you from zero knowledge of RAG all the way to building production-ready pipelines — all in one place, right in your browser.
 
 ---
 
@@ -33,7 +33,7 @@ RAG (Retrieval-Augmented Generation) is the technique behind most modern AI appl
 ### Experiment freely
 - **Playground** — test prompt engineering, visualize tokenization, explore context windows
 - **Model Manager** — download, switch, and benchmark LLM and embedding models
-- **Analytics** — track precision, recall, F1 scores, latency, and system resources in real-time
+- **Analytics** — track pipeline runs, measure performance, and monitor system resources in real-time
 
 ---
 
@@ -41,7 +41,6 @@ RAG (Retrieval-Augmented Generation) is the technique behind most modern AI appl
 
 | Layer | Technology |
 |-------|-----------|
-| Desktop | Electron |
 | Frontend | React, TypeScript, Vite, Tailwind CSS |
 | State Management | Zustand |
 | Animations | Framer Motion |
@@ -54,56 +53,33 @@ RAG (Retrieval-Augmented Generation) is the technique behind most modern AI appl
 
 ---
 
-## Getting Started
+## How to Use
 
-### Prerequisites
-- **Node.js** 18+ and npm
-- **Python** 3.10+
-- **Ollama** (optional, for local LLM inference)
-
-### Installation
-
+### 1. Start the Frontend
 ```bash
-# Clone the repository
-git clone https://github.com/sri-nikesh-1432/RAGSTUDIOPRO.git
-cd RAGSTUDIOPRO
-
-# Install frontend dependencies
 npm install
-
-# Install Python backend dependencies
-pip install -r requirements.txt
-```
-
-### Running locally
-
-```bash
-# Start the frontend (Vite dev server)
 npm run dev
+```
+The app opens at `http://localhost:5173`.
 
-# In a separate terminal, start the backend
+### 2. Start the Backend (for full functionality)
+```bash
 cd backend
+pip install -r requirements.txt
 python -m uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-The app opens at `http://localhost:5173`.
+### 3. Explore
+- **Home** — Learn about RAG concepts and see real-world analogies
+- **Learning Center** — Interactive simulators for chunking, embeddings, and cosine similarity
+- **Builder** — Upload documents, configure your pipeline, and build a RAG system
+- **Playground** — Test prompts and experiment with different configurations
+- **Analytics** — Track your pipeline runs and system performance
+- **Models** — Manage embedding and LLM models
 
 ---
 
 ## How the RAG Pipeline Works
-
-```
-┌─────────────┐     ┌───────────┐     ┌───────────┐     ┌──────────────┐
-│  Upload a    │────▶│  Chunk    │────▶│  Embed    │────▶│  Store in    │
-│  Document    │     │  Text     │     │  Chunks   │     │  Vector DB   │
-└─────────────┘     └───────────┘     └───────────┘     └──────────────┘
-                                                                │
-                                                                ▼
-┌─────────────┐     ┌───────────┐     ┌──────────────────────────────┐
-│  Generated  │◀────│  LLM      │◀────│  Retrieve Relevant Chunks    │
-│  Answer     │     │  Generate  │     │  (Semantic Search)           │
-└─────────────┘     └───────────┘     └──────────────────────────────┘
-```
 
 1. **Ingest** — Upload any file and the backend parses it into plain text
 2. **Chunk** — Split the text into smaller pieces using one of 7 strategies
@@ -111,48 +87,6 @@ The app opens at `http://localhost:5173`.
 4. **Store** — Save the vectors in a database for fast similarity search
 5. **Retrieve** — When you ask a question, find the most relevant chunks
 6. **Generate** — Feed the retrieved context to an LLM to produce an accurate answer
-
----
-
-## Project Structure
-
-```
-RAGSTUDIOPRO/
-├── backend/                # FastAPI Python backend
-│   ├── main.py             # API server with all endpoints
-│   ├── models.py           # Pydantic data models
-│   ├── parsers.py          # File parsing (PDF, DOCX, XLSX, etc.)
-│   ├── chunkers.py         # 7 chunking strategies
-│   ├── embeddings.py       # Sentence transformer embeddings
-│   ├── vectorstore.py      # FAISS + ChromaDB integration
-│   ├── retrieval.py        # Search and reranking
-│   ├── llm.py              # Ollama + OpenAI generation
-│   ├── pipeline.py         # Visual pipeline debugger
-│   └── projects.py         # Project save/load/export
-├── src/                    # React frontend
-│   ├── components/         # Shared UI components
-│   ├── pages/              # Page components
-│   ├── services/           # API service layer
-│   ├── store/              # Zustand state management
-│   └── lib/                # Utilities
-├── electron/               # Electron desktop app
-├── public/                 # Static assets
-├── package.json            # Frontend config
-├── requirements.txt        # Python dependencies
-└── electron-builder.yml    # Desktop build config
-```
-
----
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `RAG_CORS_ORIGINS` | `http://localhost:5173,...` | Allowed CORS origins |
-| `RAG_MAX_UPLOAD_SIZE` | `104857600` (100MB) | Max file upload size in bytes |
-| `OPENAI_API_KEY` | — | OpenAI API key for cloud LLM |
-| `RAG_CHROMADB_PATH` | `./data/chromadb` | ChromaDB storage path |
-| `RAG_LLM_TIMEOUT` | `120` | LLM request timeout in seconds |
 
 ---
 
