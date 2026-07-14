@@ -1,7 +1,7 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BookOpen, Brain, Wrench, BarChart3, Cpu,
+  BookOpen, Brain, BarChart3, Cpu,
   Home, ChevronLeft, ChevronRight, Minimize2, Maximize2, X, Zap,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
