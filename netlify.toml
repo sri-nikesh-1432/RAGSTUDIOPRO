@@ -1,0 +1,3 @@
+[build]
+  publish = "dist"
+  command = "echo 'Using pre-built dist folder'"
