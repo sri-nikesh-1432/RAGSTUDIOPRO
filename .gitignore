@@ -1,0 +1,78 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+!.env.example
+
+# Build output
+dist/
+dist-electron/
+build/
+out/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Misc
+*.tsbuildinfo
+coverage/
+.nyc_output/
+
+# Electron
+electron/dist/
+*.blockmap
+
+# ChromaDB / FAISS local data
+.rag-studio-pro/
+
+# Temp files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Ollama
+ollama/
+
+# Models (large files)
+models/
+*.bin
+*.onnx
+*.pt
+*.pth
