@@ -52,10 +52,40 @@ const vectorDBs = [
 ];
 
 // ─── LLM Providers ─────────────────────────────────────────────────
-const llmProviders = [
-  { id: 'ollama', name: 'Ollama (Local)', models: ['llama3.2', 'gemma2', 'mistral', 'phi3', 'qwen2.5'], local: true },
-  { id: 'openai', name: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'], local: false },
+const freeProviders = [
+  {
+    id: 'groq', name: 'Groq (Free)', description: 'Ultra-fast inference, no payment needed',
+    signupUrl: 'https://console.groq.com/keys',
+    models: [
+      { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B', speed: 'Very Fast' },
+      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', speed: 'Fast' },
+      { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', speed: 'Fast' },
+      { id: 'gemma2-9b-it', name: 'Gemma 2 9B', speed: 'Fast' },
+    ],
+  },
+  {
+    id: 'huggingface', name: 'Hugging Face (Free)', description: 'Wide model variety, free API token',
+    signupUrl: 'https://huggingface.co/settings/tokens',
+    models: [
+      { id: 'meta-llama/Llama-3.1-8B-Instruct', name: 'Llama 3.1 8B', speed: 'Medium' },
+      { id: 'mistralai/Mistral-7B-Instruct-v0.3', name: 'Mistral 7B', speed: 'Medium' },
+      { id: 'HuggingFaceH4/zephyr-7b-beta', name: 'Zephyr 7B', speed: 'Medium' },
+      { id: 'microsoft/Phi-3-mini-4k-instruct', name: 'Phi-3 Mini', speed: 'Fast' },
+    ],
+  },
+  {
+    id: 'openrouter', name: 'Open Router (Free)', description: 'Auto-select best free model',
+    signupUrl: 'https://openrouter.ai/keys',
+    models: [
+      { id: 'meta-llama/llama-3.1-8b-instruct:free', name: 'Llama 3.1 8B (Free)', speed: 'Fast' },
+      { id: 'mistralai/mistral-7b-instruct:free', name: 'Mistral 7B (Free)', speed: 'Fast' },
+      { id: 'google/gemma-2-9b-it:free', name: 'Gemma 2 9B (Free)', speed: 'Fast' },
+      { id: 'openrouter/free', name: 'Auto (Best Free)', speed: 'Varies' },
+    ],
+  },
 ];
+
+const openaiProvider = { id: 'openai', name: 'OpenAI', description: 'GPT models via API (paid)', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'] };
 
 // ─── Action Button Component ───────────────────────────────────────
 function ActionButton({ onClick, disabled, loading, children, variant = 'primary' }: {
@@ -504,8 +534,10 @@ export default function RAGBuilder() {
           if (errorMsg.includes('not found') || errorMsg.includes('404')) {
             if (store.llmProvider === 'ollama') {
               errorMsg = ollamaModels.length === 0
-                ? 'No Ollama models installed. Run "ollama pull llama3.2" in your terminal, or switch to OpenAI provider.'
-                : `Model "${store.llmModel}" not found. Available models: ${ollamaModels.join(', ')}. Pull it with "ollama pull ${store.llmModel}" or select a different model.`;
+                ? 'No Ollama models installed. Run "ollama pull llama3.2" in your terminal, or try a free cloud provider (Groq, Hugging Face, Open Router).'
+                : `Model "${store.llmModel}" not found. Available models: ${ollamaModels.join(', ')}. Pull it with "ollama pull ${store.llmModel}" or try a free cloud provider.`;
+            } else {
+              errorMsg += ' Try a different provider or check your API key.';
             }
           }
           store.addChatMessage({ role: 'assistant', content: `I found relevant chunks but couldn't generate an answer: ${errorMsg}` });
@@ -666,33 +698,111 @@ export default function RAGBuilder() {
 
             {/* Step 6: Generation */}
             <PipelineStepCard step={steps[5]} index={5} isActive={activeStep === 5} isComplete={!!generationResult} onClick={() => setActiveStep(5)}>
-              <div className="bg-bg-secondary rounded-xl border border-border-primary p-4 space-y-3">
-                {llmProviders.map((p) => (
-                  <div key={p.id}>
-                    <button onClick={() => { store.setLlmProvider(p.id); store.setLlmModel(p.models[0]); }} className={cn('w-full flex items-center justify-between p-3 rounded-lg border transition-all text-left mb-2', store.llmProvider === p.id ? 'bg-accent-glow border-accent-primary/20' : 'bg-bg-elevated border-border-primary hover:border-border-secondary')}>
-                      <div><div className="text-sm font-medium text-text-primary">{p.name}</div><div className="text-[10px] text-text-tertiary">{p.local ? 'Local' : 'API'} · {p.models.length} models</div></div>
-                      {store.llmProvider === p.id && <CheckCircle2 className="w-4 h-4 text-accent-primary" />}
-                    </button>
-                    {store.llmProvider === p.id && (
-                      <div className="flex flex-wrap gap-2 ml-4 mb-2">
-                        {p.id === 'ollama' && ollamaModels.length > 0 ? ollamaModels.map((m) => (
-                          <button key={m} onClick={() => store.setLlmModel(m)} className={cn('px-3 py-1 rounded-full text-xs transition-all', store.llmModel === m ? 'bg-accent-primary text-white' : 'bg-bg-elevated text-text-secondary hover:text-text-primary')}>{m}</button>
-                        )) : p.models.map((m) => (
+              <div className="bg-bg-secondary rounded-xl border border-border-primary p-4 space-y-4">
+                {/* Category 1: Free Cloud Models */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <h4 className="text-xs font-semibold text-emerald-400">Free Cloud Models</h4>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">No payment</span>
+                  </div>
+                  <div className="space-y-2">
+                    {freeProviders.map((p) => (
+                      <div key={p.id}>
+                        <button onClick={() => { store.setLlmProvider(p.id); store.setLlmModel(p.models[0].id); }} className={cn('w-full flex items-center justify-between p-3 rounded-lg border transition-all text-left', store.llmProvider === p.id ? 'bg-accent-glow border-accent-primary/20' : 'bg-bg-elevated border-border-primary hover:border-border-secondary')}>
+                          <div><div className="text-sm font-medium text-text-primary">{p.name}</div><div className="text-[10px] text-text-tertiary">{p.description}</div></div>
+                          {store.llmProvider === p.id && <CheckCircle2 className="w-4 h-4 text-accent-primary" />}
+                        </button>
+                        {store.llmProvider === p.id && (
+                          <div className="ml-4 mt-2 space-y-2">
+                            <div className="flex flex-wrap gap-2">
+                              {p.models.map((m) => (
+                                <button key={m.id} onClick={() => store.setLlmModel(m.id)} className={cn('px-3 py-1 rounded-full text-xs transition-all', store.llmModel === m.id ? 'bg-accent-primary text-white' : 'bg-bg-elevated text-text-secondary hover:text-text-primary')}>{m.name}</button>
+                              ))}
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-medium text-text-secondary mb-1 block">API Key (free)</label>
+                              <input type="password" value={store.openaiApiKey} onChange={(e) => store.setOpenaiApiKey(e.target.value)} placeholder={`Get free key at ${p.signupUrl}`} className="w-full bg-bg-elevated rounded-lg border border-border-primary px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-accent-primary" />
+                              <a href={p.signupUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent-primary hover:underline">Get free API key →</a>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-border-primary" />
+
+                {/* Category 2: Ollama Local */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    <h4 className="text-xs font-semibold text-blue-400">Ollama (Local)</h4>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">Run locally</span>
+                  </div>
+                  <button onClick={() => { store.setLlmProvider('ollama'); store.setLlmModel('llama3.2'); }} className={cn('w-full flex items-center justify-between p-3 rounded-lg border transition-all text-left', store.llmProvider === 'ollama' ? 'bg-accent-glow border-accent-primary/20' : 'bg-bg-elevated border-border-primary hover:border-border-secondary')}>
+                    <div><div className="text-sm font-medium text-text-primary">Ollama (Local)</div><div className="text-[10px] text-text-tertiary">Run models on your machine • 100% private</div></div>
+                    {store.llmProvider === 'ollama' && <CheckCircle2 className="w-4 h-4 text-accent-primary" />}
+                  </button>
+                  {store.llmProvider === 'ollama' && (
+                    <div className="ml-4 mt-2 space-y-2">
+                      {ollamaModels.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {ollamaModels.map((m) => (
+                            <button key={m} onClick={() => store.setLlmModel(m)} className={cn('px-3 py-1 rounded-full text-xs transition-all', store.llmModel === m ? 'bg-accent-primary text-white' : 'bg-bg-elevated text-text-secondary hover:text-text-primary')}>{m}</button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs space-y-2">
+                          <p className="text-blue-400 font-medium">No models installed yet</p>
+                          <p className="text-text-tertiary">Install Ollama and pull a model:</p>
+                          <div className="bg-bg-elevated rounded-lg p-2 font-mono text-[10px] text-text-secondary space-y-1">
+                            <div><span className="text-text-muted"># 1. Install Ollama</span></div>
+                            <div>curl -fsSL https://ollama.com/install.sh | sh</div>
+                            <div className="mt-1"><span className="text-text-muted"># 2. Pull a model</span></div>
+                            <div>ollama pull llama3.2</div>
+                            <div><span className="text-text-muted"># or other models:</span></div>
+                            <div>ollama pull mistral</div>
+                            <div>ollama pull gemma2</div>
+                          </div>
+                          <a href="https://ollama.com" target="_blank" rel="noopener noreferrer" className="text-accent-primary hover:underline text-[10px]">Visit ollama.com for more models →</a>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-border-primary" />
+
+                {/* Category 3: OpenAI */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 rounded-full bg-amber-500" />
+                    <h4 className="text-xs font-semibold text-amber-400">OpenAI</h4>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400">Paid API</span>
+                  </div>
+                  <button onClick={() => { store.setLlmProvider('openai'); store.setLlmModel('gpt-4o-mini'); }} className={cn('w-full flex items-center justify-between p-3 rounded-lg border transition-all text-left', store.llmProvider === 'openai' ? 'bg-accent-glow border-accent-primary/20' : 'bg-bg-elevated border-border-primary hover:border-border-secondary')}>
+                    <div><div className="text-sm font-medium text-text-primary">OpenAI</div><div className="text-[10px] text-text-tertiary">GPT models via API • Requires API key</div></div>
+                    {store.llmProvider === 'openai' && <CheckCircle2 className="w-4 h-4 text-accent-primary" />}
+                  </button>
+                  {store.llmProvider === 'openai' && (
+                    <div className="ml-4 mt-2 space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        {openaiProvider.models.map((m) => (
                           <button key={m} onClick={() => store.setLlmModel(m)} className={cn('px-3 py-1 rounded-full text-xs transition-all', store.llmModel === m ? 'bg-accent-primary text-white' : 'bg-bg-elevated text-text-secondary hover:text-text-primary')}>{m}</button>
                         ))}
                       </div>
-                    )}
-                    {p.id === 'ollama' && ollamaAvailable && ollamaModels.length === 0 && store.llmProvider === 'ollama' && (
-                      <div className="ml-4 mb-2 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-xs text-amber-400">
-                        ⚠️ No Ollama models installed. Run <code className="bg-bg-elevated px-1 rounded">ollama pull llama3.2</code> in your terminal, or switch to OpenAI.
+                      <div>
+                        <label className="text-[10px] font-medium text-text-secondary mb-1 block">API Key</label>
+                        <input type="password" value={store.openaiApiKey} onChange={(e) => store.setOpenaiApiKey(e.target.value)} placeholder="sk-..." className="w-full bg-bg-elevated rounded-lg border border-border-primary px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-accent-primary" />
                       </div>
-                    )}
-                  </div>
-                ))}
-                {store.llmProvider === 'openai' && (
-                  <div><label className="text-xs font-medium text-text-secondary mb-2 block">OpenAI API Key</label>
-                    <input type="password" value={store.openaiApiKey} onChange={(e) => store.setOpenaiApiKey(e.target.value)} placeholder="sk-..." className="w-full bg-bg-elevated rounded-lg border border-border-primary px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-primary" /></div>
-                )}
+                    </div>
+                  )}
+                </div>
+
                 {generationResult && (
                   <div className="bg-bg-elevated rounded-lg p-3 text-xs text-text-tertiary space-y-1">
                     <div>🤖 {generationResult.model} via {generationResult.provider}</div>

@@ -223,14 +223,137 @@ def get_system_prompt(custom: str = None) -> str:
     return custom or DEFAULT_SYSTEM_PROMPT
 
 
+# ─── Free Cloud Client (Groq, Hugging Face, OpenRouter) ──────────
+
+class FreeCloudClient:
+    """Client for free OpenAI-compatible APIs (Groq, Hugging Face, OpenRouter)."""
+
+    PROVIDERS = {
+        "groq": {
+            "base_url": "https://api.groq.com/openai/v1",
+            "models": [
+                {"id": "llama-3.1-8b-instant", "name": "Llama 3.1 8B", "speed": "Very Fast"},
+                {"id": "llama-3.3-70b-versatile", "name": "Llama 3.3 70B", "speed": "Fast"},
+                {"id": "mixtral-8x7b-32768", "name": "Mixtral 8x7B", "speed": "Fast"},
+                {"id": "gemma2-9b-it", "name": "Gemma 2 9B", "speed": "Fast"},
+            ],
+            "env_key": "GROQ_API_KEY",
+            "signup_url": "https://console.groq.com/keys",
+        },
+        "huggingface": {
+            "base_url": "https://router.huggingface.co/v1",
+            "models": [
+                {"id": "meta-llama/Llama-3.1-8B-Instruct", "name": "Llama 3.1 8B", "speed": "Medium"},
+                {"id": "mistralai/Mistral-7B-Instruct-v0.3", "name": "Mistral 7B", "speed": "Medium"},
+                {"id": "HuggingFaceH4/zephyr-7b-beta", "name": "Zephyr 7B", "speed": "Medium"},
+                {"id": "microsoft/Phi-3-mini-4k-instruct", "name": "Phi-3 Mini", "speed": "Fast"},
+            ],
+            "env_key": "HF_API_KEY",
+            "signup_url": "https://huggingface.co/settings/tokens",
+        },
+        "openrouter": {
+            "base_url": "https://openrouter.ai/api/v1",
+            "models": [
+                {"id": "meta-llama/llama-3.1-8b-instruct:free", "name": "Llama 3.1 8B (Free)", "speed": "Fast"},
+                {"id": "mistralai/mistral-7b-instruct:free", "name": "Mistral 7B (Free)", "speed": "Fast"},
+                {"id": "google/gemma-2-9b-it:free", "name": "Gemma 2 9B (Free)", "speed": "Fast"},
+                {"id": "openrouter/free", "name": "Auto (Best Free)", "speed": "Varies"},
+            ],
+            "env_key": "OPENROUTER_API_KEY",
+            "signup_url": "https://openrouter.ai/keys",
+        },
+    }
+
+    def generate(
+        self,
+        prompt: str,
+        model: str = "llama-3.1-8b-instant",
+        system_prompt: str = None,
+        temperature: float = 0.7,
+        max_tokens: int = 1024,
+        api_key: str = None,
+        provider: str = "groq",
+    ) -> Dict[str, Any]:
+        """Generate text using a free cloud provider."""
+        start_time = time.time()
+        provider_config = self.PROVIDERS.get(provider, self.PROVIDERS["groq"])
+        key = api_key or os.environ.get(provider_config["env_key"], "")
+
+        if not key:
+            return {
+                "success": False,
+                "error": f"No API key provided for {provider}. Get a free key at {provider_config['signup_url']}",
+                "total_time_ms": 0,
+            }
+
+        try:
+            import openai
+            client = openai.OpenAI(base_url=provider_config["base_url"], api_key=key)
+
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+            elapsed = (time.time() - start_time) * 1000
+            choice = response.choices[0]
+            usage = response.usage
+
+            return {
+                "success": True,
+                "answer": choice.message.content or "",
+                "model": model,
+                "provider": provider,
+                "prompt_tokens": usage.prompt_tokens if usage else 0,
+                "completion_tokens": usage.completion_tokens if usage else 0,
+                "total_tokens": usage.total_tokens if usage else 0,
+                "generation_time_ms": elapsed,
+                "total_time_ms": elapsed,
+            }
+
+        except ImportError:
+            return {
+                "success": False,
+                "error": "openai package not installed. Run: pip install openai",
+                "total_time_ms": (time.time() - start_time) * 1000,
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "total_time_ms": (time.time() - start_time) * 1000,
+            }
+
+    def get_provider_info(self) -> Dict[str, Any]:
+        """Get info about all free cloud providers."""
+        result = {}
+        for name, config in self.PROVIDERS.items():
+            has_key = bool(os.environ.get(config["env_key"], ""))
+            result[name] = {
+                "name": name.replace("huggingface", "Hugging Face").replace("openrouter", "Open Router").title(),
+                "models": config["models"],
+                "has_key": has_key,
+                "signup_url": config["signup_url"],
+            }
+        return result
+
+
 # ─── Unified Generator ────────────────────────────────────────────
 
 class LLMGenerator:
-    """Unified interface for Ollama and OpenAI generation."""
+    """Unified interface for all LLM providers."""
 
     def __init__(self):
         self.ollama = OllamaClient()
         self.openai = OpenAIClient()
+        self.free_cloud = FreeCloudClient()
 
     def generate(
         self,
@@ -249,20 +372,19 @@ class LLMGenerator:
 
         if provider == "openai":
             return self.openai.generate(
-                prompt=prompt,
-                model=model,
-                system_prompt=sys_prompt,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                api_key=api_key,
+                prompt=prompt, model=model, system_prompt=sys_prompt,
+                temperature=temperature, max_tokens=max_tokens, api_key=api_key,
+            )
+        elif provider in ("groq", "huggingface", "openrouter"):
+            return self.free_cloud.generate(
+                prompt=prompt, model=model, system_prompt=sys_prompt,
+                temperature=temperature, max_tokens=max_tokens,
+                api_key=api_key, provider=provider,
             )
         else:
             return self.ollama.generate(
-                prompt=prompt,
-                model=model,
-                system_prompt=sys_prompt,
-                temperature=temperature,
-                max_tokens=max_tokens,
+                prompt=prompt, model=model, system_prompt=sys_prompt,
+                temperature=temperature, max_tokens=max_tokens,
             )
 
     def check_ollama(self) -> Dict[str, Any]:
@@ -274,3 +396,7 @@ class LLMGenerator:
             "url": self.ollama.base_url,
             "models": models,
         }
+
+    def get_free_providers(self) -> Dict[str, Any]:
+        """Get info about free cloud providers."""
+        return self.free_cloud.get_provider_info()

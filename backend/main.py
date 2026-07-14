@@ -497,6 +497,12 @@ async def ollama_models():
     }
 
 
+@app.get("/api/llm/free-providers")
+async def free_providers():
+    """List free cloud LLM providers and their status."""
+    return llm_generator.get_free_providers()
+
+
 # ═══════════════════════════════════════════════════════════════════
 #  FULL RAG PIPELINE
 # ═══════════════════════════════════════════════════════════════════
