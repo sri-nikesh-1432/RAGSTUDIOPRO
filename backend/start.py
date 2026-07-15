@@ -17,17 +17,17 @@ def check_dependencies():
     return missing
 
 def main():
-    print("🚀 RAG Studio Pro - Backend Server")
+    print("[START] RAG Studio Pro - Backend Server")
     print("=" * 40)
 
     missing = check_dependencies()
     if missing:
-        print(f"\n⚠️  Missing packages: {', '.join(missing)}")
+        print(f"\n[WARN] Missing packages: {', '.join(missing)}")
         print(f"   Run: pip install -r requirements.txt")
         print("\n   Continuing with available packages...\n")
 
-    print("📡 Starting server on http://localhost:8000")
-    print("📖 API docs: http://localhost:8000/docs")
+    print("[INFO] Starting server on http://localhost:8000")
+    print("[INFO] API docs: http://localhost:8000/docs")
     print("   Press Ctrl+C to stop\n")
 
     try:
@@ -40,7 +40,7 @@ def main():
             log_level="info",
         )
     except KeyboardInterrupt:
-        print("\n👋 Server stopped.")
+        print("\n[STOP] Server stopped.")
 
 if __name__ == "__main__":
     main()
