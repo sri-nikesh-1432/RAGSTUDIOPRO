@@ -87,14 +87,7 @@ const freeProviders = [
 
 const openaiProvider = { id: 'openai', name: 'OpenAI', description: 'GPT models via API (paid)', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'] };
 
-// ─── Truly Free Models (No API Key Needed) ────────────────────────
-const freeModels = [
-  { id: 'mistralai/Mistral-7B-Instruct-v0.3', name: 'Mistral 7B', desc: 'Fast, high quality', speed: 'Medium' },
-  { id: 'HuggingFaceH4/zephyr-7b-beta', name: 'Zephyr 7B', desc: 'Chat-optimized', speed: 'Medium' },
-  { id: 'microsoft/Phi-3-mini-4k-instruct', name: 'Phi-3 Mini', desc: 'Small & fast', speed: 'Fast' },
-  { id: 'google/gemma-1.1-7b-it', name: 'Gemma 7B', desc: 'Google quality', speed: 'Medium' },
-  { id: 'meta-llama/Llama-2-7b-chat-hf', name: 'Llama 2 7B', desc: 'Meta classic', speed: 'Medium' },
-];
+
 
 // ─── Action Button Component ───────────────────────────────────────
 function ActionButton({ onClick, disabled, loading, children, variant = 'primary' }: {
@@ -423,7 +416,7 @@ export default function RAGBuilder() {
   const [stepProcessing, setStepProcessing] = useState<Record<number, boolean>>({});
   const [pipelineStartTime, setPipelineStartTime] = useState<number>(0);
   const [stepTimings, setStepTimings] = useState<Record<string, number>>({});
-  const [freeModel, setFreeModel] = useState(freeModels[0].id);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check backend connection and Ollama on mount
@@ -525,7 +518,7 @@ export default function RAGBuilder() {
   };
 
   // ─── Step 6: Send Query (Retrieve + Generate) ─────────────────
-  const sendQuery = async (useFree = false) => {
+  const sendQuery = async () => {
     if (!query.trim() || !buildComplete) return;
     const userMsg = { role: 'user' as const, content: query };
     store.addChatMessage(userMsg); setQuery(''); setIsSearching(true); setError(null);
@@ -535,18 +528,14 @@ export default function RAGBuilder() {
         setRetrievalResults(retrieval.results); store.incrementQueries();
         const context = retrieval.results.map((r: any) => r.text);
         let generation;
-        if (useFree) {
-          generation = await llmAPI.generateFree({ query, context, model: freeModel });
-        } else {
-          generation = await llmAPI.generate({ query, context, provider: store.llmProvider, model: store.llmModel, api_key: store.openaiApiKey || undefined });
-        }
+        generation = await llmAPI.generate({ query, context, provider: store.llmProvider, model: store.llmModel, api_key: store.openaiApiKey || undefined });
         if (generation.success) {
           setGenerationResult(generation);
           store.addChatMessage({ role: 'assistant', content: generation.answer, metadata: { chunks: retrieval.results.length, sources: retrieval.results.map((r: any) => r.metadata?.source || 'unknown').filter((s: string, i: number, a: string[]) => a.indexOf(s) === i), latency: `${(retrieval.timing.total_ms / 1000).toFixed(2)}s`, confidence: retrieval.results[0]?.score || 0 } });
         } else {
           let errorMsg = generation.error || 'LLM not available';
-          if (useFree) {
-            errorMsg = `Free model error: ${errorMsg}. The model may be loading — try again in 30 seconds, or pick a different model.`;
+          if (errorMsg.includes('getaddrinfo') || errorMsg.includes('DNS') || errorMsg.includes('network')) {
+            errorMsg = `Network error: Cannot reach the LLM API. Check your internet connection, or try Groq (free at console.groq.com/keys).`;
           } else if (errorMsg.includes('not found') || errorMsg.includes('404')) {
             if (store.llmProvider === 'ollama') {
               errorMsg = ollamaModels.length === 0
@@ -719,33 +708,50 @@ export default function RAGBuilder() {
                 <div>
                   <label className="text-xs font-medium text-text-secondary mb-2 block">Enter your query</label>
                   <div className="flex gap-2">
-                    <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendQuery(true)}
+                    <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendQuery()}
                       placeholder={buildComplete ? 'Type a question to ask your documents...' : 'Complete pipeline steps first...'}
                       disabled={!buildComplete}
                       className="flex-1 bg-bg-elevated rounded-lg border border-border-primary px-4 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-primary disabled:opacity-50" />
                   </div>
                 </div>
 
-                {/* Category 0: Truly Free Models (No API Key) */}
-                <div>
+                {/* Category 0: Quick Start — Groq Free (Recommended) */}
+                <div className="bg-gradient-to-r from-green-500/5 to-emerald-500/5 border border-green-500/20 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <h4 className="text-xs font-semibold text-green-400">Free Models (No API Key)</h4>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-green-500/10 text-green-400 font-bold">Zero Setup</span>
+                    <h4 className="text-xs font-semibold text-green-400">Quick Start: Groq Free</h4>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-green-500/10 text-green-400 font-bold">Recommended</span>
                   </div>
-                  <p className="text-[10px] text-text-tertiary mb-2">Select a model and start generating — no signup, no API key needed</p>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {freeModels.map((m) => (
-                      <button key={m.id} onClick={() => setFreeModel(m.id)} className={cn('px-3 py-1.5 rounded-lg text-xs transition-all border', freeModel === m.id ? 'bg-green-500/10 border-green-500/30 text-green-400 font-medium' : 'bg-bg-elevated border-border-primary text-text-secondary hover:text-text-primary')}>{m.name}</button>
-                    ))}
+                  <p className="text-[10px] text-text-tertiary mb-3">Fastest free LLM — no credit card needed. Just paste your free API key below.</p>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-[10px] font-medium text-text-secondary mb-1 block">Groq API Key (free at console.groq.com/keys)</label>
+                      <div className="flex gap-2">
+                        <input type="password" value={store.openaiApiKey} onChange={(e) => store.setOpenaiApiKey(e.target.value)}
+                          placeholder="gsk_..." className="flex-1 bg-bg-elevated rounded-lg border border-border-primary px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-accent-primary" />
+                        <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer"
+                          className="shrink-0 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 text-[10px] font-medium hover:bg-green-500/20 transition-all">
+                          Get Free Key
+                        </a>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {[{ id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B' }, { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B' }, { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' }, { id: 'gemma2-9b-it', name: 'Gemma 2 9B' }].map((m) => (
+                        <button key={m.id} onClick={() => { store.setLlmProvider('groq'); store.setLlmModel(m.id); }}
+                          className={cn('px-3 py-1 rounded-full text-xs transition-all', store.llmModel === m.id && store.llmProvider === 'groq' ? 'bg-green-500 text-white' : 'bg-bg-elevated text-text-secondary hover:text-text-primary')}>{m.name}</button>
+                      ))}
+                    </div>
                   </div>
-                  <button onClick={() => sendQuery(true)} disabled={!buildComplete || !query.trim() || isSearching}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium text-sm hover:shadow-lg hover:shadow-green-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                  <button onClick={() => sendQuery()} disabled={!buildComplete || !query.trim() || isSearching || !store.openaiApiKey.trim()}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium text-sm hover:shadow-lg hover:shadow-green-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-3">
                     {isSearching ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Zap className="w-4 h-4" />}
-                    {isSearching ? 'Generating...' : 'Generate with Free Model'}
+                    {isSearching ? 'Generating...' : 'Generate with Groq (Free)'}
                   </button>
                   {!buildComplete && (
                     <p className="text-[10px] text-text-tertiary text-center mt-1">Complete Steps 1-4 first to enable generation</p>
+                  )}
+                  {buildComplete && !store.openaiApiKey.trim() && (
+                    <p className="text-[10px] text-amber-400 text-center mt-1">Paste your free Groq API key above to start generating</p>
                   )}
                 </div>
 
