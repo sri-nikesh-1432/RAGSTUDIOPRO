@@ -519,7 +519,7 @@ export default function RAGBuilder() {
     try {
       const retrieval = await retrieveAPI.search({ query: retrievalQuery, top_k: 5, collection: store.collectionName, store_type: store.vectorStore, use_reranker: true, embedding_model: store.embeddingModel });
       if (retrieval.success) { setRetrievalResults(retrieval.results); }
-      else setError(retrieval.error || 'Retrieval failed');
+      else setError('Retrieval failed');
     } catch (err: any) { setError(err.message); }
     finally { setStepProcessing(p => ({ ...p, 4: false })); }
   };
@@ -545,7 +545,9 @@ export default function RAGBuilder() {
           store.addChatMessage({ role: 'assistant', content: generation.answer, metadata: { chunks: retrieval.results.length, sources: retrieval.results.map((r: any) => r.metadata?.source || 'unknown').filter((s: string, i: number, a: string[]) => a.indexOf(s) === i), latency: `${(retrieval.timing.total_ms / 1000).toFixed(2)}s`, confidence: retrieval.results[0]?.score || 0 } });
         } else {
           let errorMsg = generation.error || 'LLM not available';
-          if (errorMsg.includes('not found') || errorMsg.includes('404')) {
+          if (useFree) {
+            errorMsg = `Free model error: ${errorMsg}. The model may be loading — try again in 30 seconds, or pick a different model.`;
+          } else if (errorMsg.includes('not found') || errorMsg.includes('404')) {
             if (store.llmProvider === 'ollama') {
               errorMsg = ollamaModels.length === 0
                 ? 'No Ollama models installed. Run "ollama pull llama3.2" in your terminal, or try a free cloud provider (Groq, Hugging Face, Open Router).'
@@ -713,6 +715,17 @@ export default function RAGBuilder() {
             {/* Step 6: Generation */}
             <PipelineStepCard step={steps[5]} index={5} isActive={activeStep === 5} isComplete={!!generationResult} onClick={() => setActiveStep(5)}>
               <div className="bg-bg-secondary rounded-xl border border-border-primary p-4 space-y-4">
+                {/* Query Input */}
+                <div>
+                  <label className="text-xs font-medium text-text-secondary mb-2 block">Enter your query</label>
+                  <div className="flex gap-2">
+                    <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendQuery(true)}
+                      placeholder={buildComplete ? 'Type a question to ask your documents...' : 'Complete pipeline steps first...'}
+                      disabled={!buildComplete}
+                      className="flex-1 bg-bg-elevated rounded-lg border border-border-primary px-4 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-primary disabled:opacity-50" />
+                  </div>
+                </div>
+
                 {/* Category 0: Truly Free Models (No API Key) */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -728,9 +741,12 @@ export default function RAGBuilder() {
                   </div>
                   <button onClick={() => sendQuery(true)} disabled={!buildComplete || !query.trim() || isSearching}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium text-sm hover:shadow-lg hover:shadow-green-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                    {isSearching && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-                    Generate with Free Model
+                    {isSearching ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Zap className="w-4 h-4" />}
+                    {isSearching ? 'Generating...' : 'Generate with Free Model'}
                   </button>
+                  {!buildComplete && (
+                    <p className="text-[10px] text-text-tertiary text-center mt-1">Complete Steps 1-4 first to enable generation</p>
+                  )}
                 </div>
 
                 {/* Divider */}
@@ -894,7 +910,7 @@ export default function RAGBuilder() {
               <div className="p-4 border-t border-border-primary">
                 <div className="flex gap-2">
                   <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendQuery()} disabled={!buildComplete} placeholder={buildComplete ? 'Ask a question...' : 'Complete all steps first'} className="flex-1 bg-bg-elevated rounded-lg border border-border-primary px-4 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-primary disabled:opacity-50" />
-                  <button onClick={sendQuery} disabled={!buildComplete || !query.trim() || isSearching} className="px-4 py-2.5 rounded-lg bg-accent-primary text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-accent-dim transition-all"><MessageSquare className="w-4 h-4" /></button>
+                  <button onClick={() => sendQuery()} disabled={!buildComplete || !query.trim() || isSearching} className="px-4 py-2.5 rounded-lg bg-accent-primary text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-accent-dim transition-all"><MessageSquare className="w-4 h-4" /></button>
                 </div>
               </div>
             </div>
