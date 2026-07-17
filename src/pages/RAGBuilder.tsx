@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, FileText, Layers, Brain, Database, Search, MessageSquare,
-  ChevronRight, CheckCircle2, AlertCircle, Zap, X, FileCode, Globe,
+  ChevronRight, CheckCircle2, AlertCircle, Zap, X,
   BarChart3, Clock, Target
 } from 'lucide-react';
 import { cn, formatNumber } from '../lib/utils';
@@ -37,9 +37,6 @@ const vectorDBs = [
   { id: 'faiss_hnsw', name: 'FAISS HNSW', desc: 'Approximate NN (faster)' },
   { id: 'chromadb', name: 'ChromaDB', desc: 'Open-source embedding DB' },
 ];
-
-// ─── LLM Providers ─────────────────────────────────────────────────
-
 
 
 // ─── Action Button Component ───────────────────────────────────────

@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import type { Chunk, PipelineRun, PipelineStep } from '../services/api';
+import type { Chunk } from '../services/api';
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -77,14 +77,6 @@ interface AppState {
   llmModel: string;
   setLlmModel: (m: string) => void;
 
-  // Pipeline execution
-  isPipelineRunning: boolean;
-  setIsPipelineRunning: (v: boolean) => void;
-  currentPipeline: PipelineRun | null;
-  setCurrentPipeline: (p: PipelineRun | null) => void;
-  pipelineSteps: PipelineStep[];
-  setPipelineSteps: (s: PipelineStep[]) => void;
-
   // Chat
   chatMessages: ChatMessage[];
   addChatMessage: (m: ChatMessage) => void;
@@ -143,14 +135,6 @@ export const useAppStore = create<AppState>((set) => ({
   llmModel: 'llama-3.1-8b-instant',
   setLlmModel: (m) => set({ llmModel: m }),
 
-
-  // Pipeline execution
-  isPipelineRunning: false,
-  setIsPipelineRunning: (v) => set({ isPipelineRunning: v }),
-  currentPipeline: null,
-  setCurrentPipeline: (p) => set({ currentPipeline: p }),
-  pipelineSteps: [],
-  setPipelineSteps: (s) => set({ pipelineSteps: s }),
 
   // Chat
   chatMessages: [],
