@@ -237,15 +237,7 @@ export const llmAPI = {
       method: 'POST',
       body: JSON.stringify(params),
     }),
-  generateFree: (params: {
-    query: string;
-    context?: string[];
-    model?: string;
-  }) =>
-    apiFetch<GenerationResult>('/llm/generate-free', {
-      method: 'POST',
-      body: JSON.stringify(params),
-    }),
+
   ollamaStatus: () => apiFetch<{ available: boolean; models: any[] }>('/llm/ollama/status'),
   ollamaModels: () => apiFetch<{ available: boolean; models: any[] }>('/llm/ollama/models'),
 };
@@ -339,4 +331,41 @@ export const projectAPI = {
     apiFetch<{ success: boolean }>(`/projects/${name}`, { method: 'DELETE' }),
   export: (name: string) =>
     apiFetch<{ success: boolean; export_path: string; size: number }>(`/projects/${name}/export`, { method: 'POST' }),
+};
+
+// ─── MCP Server ───────────────────────────────────────────────────
+
+export interface MCPTool {
+  name: string;
+  description: string;
+  inputSchema: {
+    type: string;
+    properties: Record<string, any>;
+    required?: string[];
+  };
+}
+
+export interface MCPToolCallResult {
+  success: boolean;
+  content?: string;
+  error?: string;
+  time_ms?: number;
+  [key: string]: any;
+}
+
+export interface MCPResource {
+  uri: string;
+  name: string;
+  mimeType: string;
+}
+
+export const mcpAPI = {
+  listTools: () => apiFetch<{ tools: MCPTool[] }>('/mcp/tools'),
+  callTool: (name: string, args: Record<string, any> = {}) =>
+    apiFetch<MCPToolCallResult>('/mcp/tools/call', {
+      method: 'POST',
+      body: JSON.stringify({ name, arguments: args }),
+    }),
+  listResources: () => apiFetch<{ resources: MCPResource[] }>('/mcp/resources'),
+  readResource: (uri: string) => apiFetch<{ success: boolean; content: string }>(`/mcp/resources/${encodeURIComponent(uri)}`),
 };

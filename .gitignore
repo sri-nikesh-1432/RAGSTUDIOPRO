@@ -79,3 +79,5 @@ models/
 
 # Local Netlify folder
 .netlify
+nul
+restart_backend.py

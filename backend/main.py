@@ -464,8 +464,8 @@ async def generate(request: GenerateRequest):
     if not request.query:
         return {"success": False, "error": "No query provided"}
 
-    # Prefer env var API key over request body for security
-    api_key = os.environ.get("OPENAI_API_KEY") or request.api_key
+    # Use request body API key first (user-entered), fall back to env var
+    api_key = request.api_key or os.environ.get("OPENAI_API_KEY", "")
 
     result = llm_generator.generate(
         query=request.query,
@@ -503,19 +503,268 @@ async def free_providers():
     return llm_generator.get_free_providers()
 
 
-class FreeGenerateRequest(BaseModel):
-    query: str
-    context: List[str] = []
-    model: str = "mistralai/Mistral-7B-Instruct-v0.3"
+# ═══════════════════════════════════════════════════════════════════
+#  MCP SERVER — Expose RAG as MCP Tools
+# ═══════════════════════════════════════════════════════════════════
 
-@app.post("/api/llm/generate-free")
-async def generate_free(request: FreeGenerateRequest):
-    """Generate using free HF inference API (no API key needed)."""
-    return llm_generator.generate_free(
-        query=request.query,
-        context=request.context,
-        model=request.model,
-    )
+class MCPToolCallRequest(BaseModel):
+    name: str
+    arguments: Dict[str, Any] = {}
+
+@app.get("/api/mcp/tools")
+async def mcp_list_tools():
+    """List all available MCP tools."""
+    return {
+        "tools": [
+            {
+                "name": "vector_search",
+                "description": "Search the document knowledge base semantically. Use when the user asks a question about the documents.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "The search query (user's question)"},
+                        "top_k": {"type": "integer", "default": 5, "description": "Number of results to return"},
+                        "collection": {"type": "string", "default": "default", "description": "Which document collection to search"},
+                        "store_type": {"type": "string", "default": "faiss_flat", "description": "Vector store backend"},
+                        "embedding_model": {"type": "string", "default": "all-MiniLM-L6-v2", "description": "Model to use for query embedding"},
+                        "use_reranker": {"type": "boolean", "default": True, "description": "Whether to rerank results"},
+                    },
+                    "required": ["query"],
+                },
+            },
+            {
+                "name": "store_document",
+                "description": "Add a document to the knowledge base. Automatically chunks, generates embeddings, and stores vectors.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "text": {"type": "string", "description": "The document text to store"},
+                        "collection": {"type": "string", "default": "default"},
+                        "store_type": {"type": "string", "default": "faiss_flat"},
+                        "chunk_method": {"type": "string", "default": "recursive"},
+                        "chunk_size": {"type": "integer", "default": 500},
+                        "overlap": {"type": "integer", "default": 50},
+                        "embedding_model": {"type": "string", "default": "all-MiniLM-L6-v2"},
+                    },
+                    "required": ["text"],
+                },
+            },
+            {
+                "name": "generate_answer",
+                "description": "Generate an answer using an LLM with retrieved context. Use after vector_search to generate a grounded answer.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "The user's original question"},
+                        "context": {"type": "string", "description": "The retrieved context from vector_search"},
+                        "provider": {"type": "string", "default": "ollama"},
+                        "model": {"type": "string", "default": "llama3.2"},
+                        "api_key": {"type": "string", "description": "API key for cloud providers"},
+                    },
+                    "required": ["query", "context"],
+                },
+            },
+            {
+                "name": "list_collections",
+                "description": "List all available document collections with their statistics.",
+                "inputSchema": {"type": "object", "properties": {}},
+            },
+            {
+                "name": "get_collection_stats",
+                "description": "Get detailed statistics about a document collection.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "collection": {"type": "string", "default": "default"},
+                        "store_type": {"type": "string", "default": "faiss_flat"},
+                    },
+                },
+            },
+            {
+                "name": "delete_collection",
+                "description": "Delete an entire document collection permanently.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "collection": {"type": "string", "description": "Collection name to delete"},
+                        "store_type": {"type": "string", "default": "faiss_flat"},
+                    },
+                    "required": ["collection"],
+                },
+            },
+            {
+                "name": "list_embedding_models",
+                "description": "List all available embedding models with dimensions, size, and quality ratings.",
+                "inputSchema": {"type": "object", "properties": {}},
+            },
+        ]
+    }
+
+
+@app.post("/api/mcp/tools/call")
+async def mcp_call_tool(request: MCPToolCallRequest):
+    """Execute an MCP tool by name."""
+    start = time.time()
+    name = request.name
+    args = request.arguments
+
+    try:
+        if name == "vector_search":
+            query = args.get("query", "")
+            top_k = args.get("top_k", 5)
+            collection = args.get("collection", "default")
+            store_type = args.get("store_type", "faiss_flat")
+            embedding_model = args.get("embedding_model", "all-MiniLM-L6-v2")
+            use_reranker = args.get("use_reranker", True)
+
+            embed_result = generate_query_embedding(query, embedding_model)
+            if not embed_result.success:
+                return {"success": False, "error": f"Embedding failed: {embed_result.error}"}
+
+            store = vector_manager.get_store(store_type, collection)
+            raw_results = store.search(embed_result.embeddings[0], top_k * 2 if use_reranker else top_k)
+
+            if use_reranker and raw_results:
+                results = rerank_results(query, raw_results, method="keyword_overlap")
+                results = results[:top_k]
+            else:
+                results = raw_results[:top_k]
+
+            elapsed = (time.time() - start) * 1000
+            if not results:
+                return {"success": True, "results": [], "content": f"No results found for '{query}'."}
+
+            output_parts = [f"Found {len(results)} relevant chunks ({elapsed:.0f}ms):\n"]
+            for i, r in enumerate(results, 1):
+                score = r.get("score", 0)
+                text = r.get("text", "")
+                source = r.get("metadata", {}).get("source", "unknown")
+                output_parts.append(f"--- Result {i} ({score:.1%} relevance) ---\nSource: {source}\nContent: {text}\n")
+
+            return {"success": True, "results": results, "content": "\n".join(output_parts), "time_ms": round(elapsed, 2)}
+
+        elif name == "store_document":
+            text = args.get("text", "")
+            collection = args.get("collection", "default")
+            store_type = args.get("store_type", "faiss_flat")
+            chunk_method = args.get("chunk_method", "recursive")
+            chunk_size = args.get("chunk_size", 500)
+            overlap = args.get("overlap", 50)
+            embedding_model = args.get("embedding_model", "all-MiniLM-L6-v2")
+
+            chunk_result = chunk_text(text=text, method=chunk_method, chunk_size=chunk_size, overlap=overlap)
+            if not chunk_result.get("success"):
+                return {"success": False, "error": f"Chunking failed: {chunk_result.get('error')}"}
+
+            chunks = chunk_result.get("chunks", [])
+            chunk_texts = [c["text"] for c in chunks]
+            chunk_ids = [c["id"] for c in chunks]
+            chunk_metadata = [c.get("metadata", {}) for c in chunks]
+
+            embed_result = generate_embeddings(chunk_texts, embedding_model)
+            if not embed_result.success:
+                return {"success": False, "error": f"Embedding failed: {embed_result.error}"}
+
+            store = vector_manager.get_store(store_type, collection, embed_result.dimensions)
+            store.add(chunk_ids, embed_result.embeddings, chunk_metadata, texts=chunk_texts)
+
+            elapsed = (time.time() - start) * 1000
+            return {
+                "success": True,
+                "content": f"Document stored: {len(chunks)} chunks, {embed_result.dimensions}d embeddings, {store.count()} total vectors.",
+                "time_ms": round(elapsed, 2),
+            }
+
+        elif name == "generate_answer":
+            query = args.get("query", "")
+            context = args.get("context", "")
+            provider = args.get("provider", "ollama")
+            model = args.get("model", "llama3.2")
+            api_key = args.get("api_key", "")
+
+            context_list = [c.strip() for c in context.split("---") if c.strip()] if "---" in context else [context]
+
+            result = llm_generator.generate(
+                query=query, context=context_list,
+                provider=provider, model=model, api_key=api_key,
+            )
+
+            elapsed = (time.time() - start) * 1000
+            if result.get("success"):
+                return {
+                    "success": True,
+                    "content": result["answer"],
+                    "model": result.get("model"),
+                    "provider": result.get("provider"),
+                    "tokens": result.get("total_tokens", 0),
+                    "time_ms": round(elapsed, 2),
+                }
+            else:
+                return {"success": False, "error": result.get("error", "Generation failed")}
+
+        elif name == "list_collections":
+            stores = vector_manager.list_stores()
+            if not stores:
+                return {"success": True, "content": "No collections found.", "collections": []}
+            parts = [f"Found {len(stores)} collection(s):\n"]
+            for s in stores:
+                parts.append(f"- {s.get('collection', 'default')} ({s.get('store_type', 'unknown')}): {s.get('count', 0)} vectors")
+            return {"success": True, "content": "\n".join(parts), "collections": stores}
+
+        elif name == "get_collection_stats":
+            collection = args.get("collection", "default")
+            store_type = args.get("store_type", "faiss_flat")
+            store = vector_manager.get_store(store_type, collection)
+            stats = store.stats()
+            return {"success": True, "content": json.dumps(stats, indent=2), "stats": stats}
+
+        elif name == "delete_collection":
+            collection = args.get("collection", "")
+            store_type = args.get("store_type", "faiss_flat")
+            vector_manager.delete_store(store_type, collection)
+            return {"success": True, "content": f"Collection '{collection}' deleted."}
+
+        elif name == "list_embedding_models":
+            models = get_all_models()
+            parts = [f"Available models ({len(models)}):\n"]
+            for m in models:
+                parts.append(f"- {m.get('display_name', m.get('name', '?'))}: {m.get('dimensions', '?')}d, {m.get('size_mb', '?')}MB")
+            return {"success": True, "content": "\n".join(parts), "models": models}
+
+        else:
+            return {"success": False, "error": f"Unknown tool: {name}"}
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/mcp/resources")
+async def mcp_list_resources():
+    """List all MCP resources."""
+    return {
+        "resources": [
+            {"uri": "rag://collections", "name": "All Collections", "mimeType": "application/json"},
+            {"uri": "rag://health", "name": "Server Health", "mimeType": "application/json"},
+            {"uri": "rag://models/embedding", "name": "Embedding Models", "mimeType": "application/json"},
+        ]
+    }
+
+
+@app.get("/api/mcp/resources/{resource_uri:path}")
+async def mcp_read_resource(resource_uri: str):
+    """Read an MCP resource by URI."""
+    if resource_uri == "rag://collections":
+        return {"success": True, "content": json.dumps(vector_manager.list_stores(), indent=2)}
+    elif resource_uri == "rag://health":
+        ollama_ok = llm_generator.check_ollama().get("available", False)
+        return {"success": True, "content": json.dumps({"status": "healthy", "ollama": ollama_ok, "collections": len(vector_manager.list_stores())})}
+    elif resource_uri == "rag://models/embedding":
+        return {"success": True, "content": json.dumps(get_all_models(), indent=2)}
+    else:
+        return {"success": False, "error": f"Unknown resource: {resource_uri}"}
+
+
+
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -651,7 +900,7 @@ async def run_full_pipeline(request: PipelineRunRequestModel):
                 context=context_chunks,
                 provider=request.llm_provider,
                 model=request.llm_model,
-                api_key=os.environ.get("OPENAI_API_KEY") or request.api_key,
+                api_key=request.api_key or os.environ.get("OPENAI_API_KEY", ""),
             )
             analytics["generation_time_ms"] = round((time.time() - gen_start) * 1000, 2)
             analytics["total_tokens"] = gen_result.get("total_tokens", 0)

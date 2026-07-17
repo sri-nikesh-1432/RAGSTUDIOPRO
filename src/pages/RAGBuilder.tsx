@@ -869,15 +869,7 @@ export default function RAGBuilder() {
                   </div>
                 )}
 
-                {/* Free Model Generate Button for non-free providers */}
-                {store.llmProvider !== 'free' && store.llmProvider && (
-                  <>
-                    <div className="border-t border-border-primary" />
-                    <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3">
-                      <p className="text-[10px] text-green-400 mb-2">💡 Want to try without API key? Use the Free Model at the top!</p>
-                    </div>
-                  </>
-                )}
+
               </div>
             </PipelineStepCard>
 

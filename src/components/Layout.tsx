@@ -1,7 +1,7 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BookOpen, Brain, BarChart3, Cpu,
+  BookOpen, Brain, BarChart3, Cpu, Network,
   Home, ChevronLeft, ChevronRight, Zap,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -13,6 +13,7 @@ const navItems = [
   { path: '/playground', icon: Brain, label: 'Playground', description: 'Experiment with concepts' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics', description: 'Performance metrics' },
   { path: '/models', icon: Cpu, label: 'Models', description: 'Manage AI models' },
+  { path: '/mcp', icon: Network, label: 'MCP Server', description: 'Expose RAG as MCP tools' },
 ];
 
 export default function Layout() {
