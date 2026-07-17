@@ -8,7 +8,7 @@ import Playground from './pages/Playground';
 import RAGBuilder from './pages/RAGBuilder';
 import Analytics from './pages/Analytics';
 import ModelManager from './pages/ModelManager';
-import MCPPage from './pages/MCPPage';
+import Documentation from './pages/Documentation';
 
 export default function App() {
   return (
@@ -32,7 +32,7 @@ export default function App() {
           <Route path="/builder" element={<RAGBuilder />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/models" element={<ModelManager />} />
-          <Route path="/mcp" element={<MCPPage />} />
+          <Route path="/docs" element={<Documentation />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
