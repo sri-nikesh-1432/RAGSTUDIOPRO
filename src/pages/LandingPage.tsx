@@ -184,11 +184,11 @@ function HeroSection() {
           className="flex items-center justify-center gap-4 flex-wrap mb-16"
         >
           <button
-            onClick={() => navigate('/builder')}
+            onClick={() => navigate('/workspace')}
             className="group flex items-center gap-2.5 px-7 py-3.5 rounded-xl bg-gradient-to-r from-accent-primary to-accent-dim text-white font-semibold text-sm transition-all duration-300 hover:shadow-xl hover:shadow-accent-primary/20 btn-premium"
           >
             <Wrench className="w-4 h-4" />
-            Start Building
+            Open Workspace
             <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
           </button>
           <button
@@ -447,11 +447,11 @@ function CTASection() {
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <button
-              onClick={() => navigate('/builder')}
+              onClick={() => navigate('/workspace')}
               className="group flex items-center gap-2.5 px-7 py-3.5 rounded-xl bg-gradient-to-r from-accent-primary to-accent-dim text-white font-semibold text-sm transition-all duration-300 hover:shadow-xl hover:shadow-accent-primary/20 btn-premium"
             >
               <Zap className="w-4 h-4" />
-              Open Builder
+              Open Workspace
               <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
             </button>
             <button

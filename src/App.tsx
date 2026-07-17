@@ -24,7 +24,7 @@ export default function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/builder" element={<RAGBuilder />} />
+          <Route path="/workspace" element={<RAGBuilder />} />
           <Route path="/docs" element={<Documentation />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

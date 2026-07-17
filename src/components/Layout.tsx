@@ -1,14 +1,14 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Home, FileText, Wrench, ChevronLeft, ChevronRight, Sparkles,
+  Home, FileText, Layers3, ChevronLeft, ChevronRight, Sparkles,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../lib/utils';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home', description: 'RAG Studio Pro' },
-  { path: '/builder', icon: Wrench, label: 'Builder', description: 'Build RAG pipelines' },
+  { path: '/workspace', icon: Layers3, label: 'Workspace', description: 'Build RAG pipelines' },
   { path: '/docs', icon: FileText, label: 'Documentation', description: 'Multimodal RAG guides' },
 ];
 

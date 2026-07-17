@@ -856,7 +856,7 @@ User Question: {query}`} />
               ]}
             />
             <InfoCard title="Environment Configuration" variant="tip">
-              All API keys are read from the .env file on the backend. The frontend never exposes or stores API keys. Users can switch providers through the Builder interface without touching configuration.
+              All API keys are read from the .env file on the backend. The frontend never exposes or stores API keys. Users can switch providers through the Workspace interface without touching configuration.
             </InfoCard>
           </DocSection>
 
@@ -930,9 +930,9 @@ User Question: {query}`} />
                 { q: 'Can I use it offline?', a: 'Yes. With Ollama running locally, you can use open-source models (Llama 3, Mistral, Phi) without any internet connection. Vector stores persist locally.' },
                 { q: 'How does the Evidence Timeline work?', a: 'Every retrieval result includes source metadata (page number, frame index, audio timestamp). The generation step maps its answer to these sources, creating a clickable evidence trail.' },
                 { q: 'Is my data private?', a: 'Yes. All processing happens locally on your machine. Documents are parsed, chunked, and embedded locally. Vector stores persist in your project directory. No data is sent to external services unless you configure a cloud LLM provider.' },
-                { q: 'Can I switch between vector stores?', a: 'Yes. RAG Studio Pro supports FAISS and ChromaDB. You can switch between them in the Builder, and your data persists across sessions.' },
+                { q: 'Can I switch between vector stores?', a: 'Yes. RAG Studio Pro supports FAISS and ChromaDB. You can switch between them in the Workspace, and your data persists across sessions.' },
                 { q: 'What is the difference between FAISS and ChromaDB?', a: 'FAISS is an in-memory index optimized for speed — great for large datasets. ChromaDB is an embedded database with persistent storage and metadata filtering — great for structured queries.' },
-                { q: 'How do I add a new document?', a: 'Go to Builder → Step 1 (Ingestion) → click the upload area or paste text directly. The backend parses the file and extracts text, metadata, and structure.' },
+                { q: 'How do I add a new document?', a: 'Go to Workspace → Step 1 (Ingestion) → click the upload area or paste text directly. The backend parses the file and extracts text, metadata, and structure.' },
               ].map(({ q, a }) => (
                 <div key={q} className="bg-bg-elevated rounded-xl p-4 border border-border-primary">
                   <h5 className="text-sm font-semibold text-text-primary mb-2">{q}</h5>
