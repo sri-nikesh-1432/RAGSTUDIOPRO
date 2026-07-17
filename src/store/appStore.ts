@@ -28,6 +28,15 @@ interface ChatMessage {
     sources?: string[];
     latency?: string;
     confidence?: number;
+    evidence?: Array<{
+      rank: number;
+      score: number;
+      text: string;
+      source: string;
+      page?: number;
+      chunk_id?: string;
+      metadata?: Record<string, any>;
+    }>;
   };
 }
 
@@ -67,8 +76,6 @@ interface AppState {
   setLlmProvider: (p: string) => void;
   llmModel: string;
   setLlmModel: (m: string) => void;
-  openaiApiKey: string;
-  setOpenaiApiKey: (k: string) => void;
 
   // Pipeline execution
   isPipelineRunning: boolean;
@@ -131,12 +138,11 @@ export const useAppStore = create<AppState>((set) => ({
   setVectorStore: (v) => set({ vectorStore: v }),
   collectionName: 'default',
   setCollectionName: (n) => set({ collectionName: n }),
-  llmProvider: 'ollama',
+  llmProvider: 'groq',
   setLlmProvider: (p) => set({ llmProvider: p }),
-  llmModel: 'llama3.2',
+  llmModel: 'llama-3.1-8b-instant',
   setLlmModel: (m) => set({ llmModel: m }),
-  openaiApiKey: '',
-  setOpenaiApiKey: (k) => set({ openaiApiKey: k }),
+
 
   // Pipeline execution
   isPipelineRunning: false,

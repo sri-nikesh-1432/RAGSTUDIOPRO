@@ -3,11 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import Layout from './components/Layout';
 import LandingPage from './pages/LandingPage';
-import LearningCenter from './pages/LearningCenter';
-import Playground from './pages/Playground';
 import RAGBuilder from './pages/RAGBuilder';
-import Analytics from './pages/Analytics';
-import ModelManager from './pages/ModelManager';
 import Documentation from './pages/Documentation';
 
 export default function App() {
@@ -18,20 +14,17 @@ export default function App() {
         position="top-right"
         toastOptions={{
           style: {
-            background: '#1a1a26',
-            color: '#f1f5f9',
-            border: '1px solid rgba(255,255,255,0.05)',
+            background: '#fefcf8',
+            color: '#1a1a1a',
+            border: '1px solid #e8e0d4',
+            fontFamily: 'Inter, system-ui, sans-serif',
           },
         }}
       />
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/learn" element={<LearningCenter />} />
-          <Route path="/playground" element={<Playground />} />
           <Route path="/builder" element={<RAGBuilder />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/models" element={<ModelManager />} />
           <Route path="/docs" element={<Documentation />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

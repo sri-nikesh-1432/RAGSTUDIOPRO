@@ -50,7 +50,7 @@ function PromptEngineering() {
         system_prompt: systemPrompt,
         temperature,
         max_tokens: maxTokens,
-        api_key: store.openaiApiKey || undefined,
+        api_key: undefined,
       });
       if (result.success) {
         setGeneratedAnswer(result.answer);
@@ -357,7 +357,7 @@ function RAGPipelineSimulator() {
       setCurrentStep(5);
       setStepResults(prev => ({ ...prev, 5: { status: 'running' } }));
       if (retrieval.success && retrieval.results.length > 0) {
-        const generation = await llmAPI.generate({ query, context: retrieval.results.map((r: any) => r.text), provider: store.llmProvider, model: store.llmModel, api_key: store.openaiApiKey || undefined });
+        const generation = await llmAPI.generate({ query, context: retrieval.results.map((r: any) => r.text), provider: store.llmProvider, model: store.llmModel });
         if (generation.success) {
           setFinalAnswer(generation.answer);
           setStepResults(prev => ({ ...prev, 5: { status: 'done', result: `${generation.total_tokens} tokens in ${generation.total_time_ms.toFixed(0)}ms` } }));

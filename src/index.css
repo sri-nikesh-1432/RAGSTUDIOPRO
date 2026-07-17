@@ -14,8 +14,8 @@ html {
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: #06060b;
-  color: #f1f5f9;
+  background: #fefcf8;
+  color: #1a1a1a;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -23,32 +23,29 @@ body {
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #d4cabb;
   border-radius: 3px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #8b5cf6;
+  background: #b07d56;
 }
 
 /* Selection */
 ::selection {
-  background: rgba(139, 92, 246, 0.4);
-  color: #f1f5f9;
+  background: rgba(176, 125, 86, 0.25);
+  color: #1a1a1a;
 }
 
 /* Focus Ring */
 *:focus-visible {
-  outline: 2px solid rgba(139, 92, 246, 0.6);
+  outline: 2px solid rgba(176, 125, 86, 0.5);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -56,21 +53,21 @@ body {
 /* ─── Glass Morphism ────────────────────────────────────────────── */
 @layer utilities {
   .glass {
-    background: rgba(17, 17, 25, 0.7);
+    background: rgba(254, 252, 248, 0.75);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(232, 224, 212, 0.6);
   }
 
   .glass-strong {
-    background: rgba(10, 10, 15, 0.92);
+    background: rgba(254, 252, 248, 0.92);
     backdrop-filter: blur(40px) saturate(200%);
     -webkit-backdrop-filter: blur(40px) saturate(200%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(232, 224, 212, 0.8);
   }
 
   .gradient-text {
-    background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 40%, #c4b5fd 70%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #b07d56 0%, #d4a574 40%, #b76e79 70%, #b07d56 100%);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -79,7 +76,7 @@ body {
   }
 
   .gradient-text-hero {
-    background: linear-gradient(135deg, #ffffff 0%, #c4b5fd 30%, #8b5cf6 60%, #a78bfa 100%);
+    background: linear-gradient(135deg, #1a1a1a 0%, #b07d56 40%, #b76e79 70%, #d4a574 100%);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -88,33 +85,31 @@ body {
   }
 
   .glow-sm {
-    box-shadow: 0 0 10px rgba(139, 92, 246, 0.12), 0 0 30px rgba(139, 92, 246, 0.06);
+    box-shadow: 0 0 10px rgba(176, 125, 86, 0.1), 0 0 30px rgba(176, 125, 86, 0.05);
   }
 
   .glow-md {
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.2), 0 0 60px rgba(139, 92, 246, 0.1);
+    box-shadow: 0 0 20px rgba(176, 125, 86, 0.15), 0 0 60px rgba(176, 125, 86, 0.08);
   }
 
   .glow-lg {
-    box-shadow: 0 0 40px rgba(139, 92, 246, 0.3), 0 0 100px rgba(139, 92, 246, 0.15);
+    box-shadow: 0 0 40px rgba(176, 125, 86, 0.2), 0 0 100px rgba(176, 125, 86, 0.1);
   }
 
-  .text-shadow-glow {
-    text-shadow: 0 0 30px rgba(139, 92, 246, 0.6);
+  .text-shadow-soft {
+    text-shadow: 0 1px 3px rgba(26, 26, 26, 0.08);
   }
 
   .animate-in {
     animation: slideUp 0.5s ease-out forwards;
   }
 
-
-
   /* Shimmer effect */
   .shimmer {
     background: linear-gradient(
       110deg,
       transparent 33%,
-      rgba(139, 92, 246, 0.08) 50%,
+      rgba(176, 125, 86, 0.06) 50%,
       transparent 67%
     );
     background-size: 300% 100%;
@@ -126,17 +121,13 @@ body {
     position: relative;
     overflow: hidden;
   }
-
   .spotlight::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    top: 0; left: 0; right: 0; bottom: 0;
     background: radial-gradient(
       600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-      rgba(139, 92, 246, 0.06),
+      rgba(176, 125, 86, 0.04),
       transparent 40%
     );
     opacity: 0;
@@ -144,7 +135,6 @@ body {
     pointer-events: none;
     z-index: 1;
   }
-
   .spotlight:hover::before {
     opacity: 1;
   }
@@ -155,41 +145,21 @@ body {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
 }
-
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
-
 @keyframes slideUp {
   0% { transform: translateY(30px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }
 }
-
 @keyframes grid-pulse {
-  0%, 100% { opacity: 0.03; }
-  50% { opacity: 0.06; }
+  0%, 100% { opacity: 0.02; }
+  50% { opacity: 0.04; }
 }
-
-
-
-/* ─── Plotly Overrides ──────────────────────────────────────────── */
-.js-plotly-plot .plotly .modebar {
-  top: 5px !important;
-  right: 5px !important;
-}
-
-.js-plotly-plot .plotly .modebar-btn {
-  color: #64748b !important;
-}
-
-.js-plotly-plot .plotly .modebar-btn:hover {
-  color: #8b5cf6 !important;
-}
-
-/* ─── Code Blocks ───────────────────────────────────────────────── */
-pre code {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(2deg); }
 }
 
 /* ─── Premium Button Styles ─────────────────────────────────────── */
@@ -198,20 +168,17 @@ pre code {
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 .btn-premium::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+  background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
-
 .btn-premium:hover::after {
   opacity: 1;
 }
-
 .btn-premium:active {
   transform: scale(0.98);
 }
@@ -221,10 +188,24 @@ pre code {
   position: relative;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 .card-premium:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.15);
+  box-shadow: 0 8px 32px rgba(176, 125, 86, 0.1);
 }
 
+/* ─── Code Blocks ───────────────────────────────────────────────── */
+pre code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
 
+/* ─── Plotly Overrides ──────────────────────────────────────────── */
+.js-plotly-plot .plotly .modebar {
+  top: 5px !important;
+  right: 5px !important;
+}
+.js-plotly-plot .plotly .modebar-btn {
+  color: #7a7268 !important;
+}
+.js-plotly-plot .plotly .modebar-btn:hover {
+  color: #b07d56 !important;
+}

@@ -1,19 +1,15 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BookOpen, Brain, BarChart3, Cpu, FileText,
-  Home, ChevronLeft, ChevronRight, Zap,
+  Home, FileText, Wrench, ChevronLeft, ChevronRight, Sparkles,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../lib/utils';
 
 const navItems = [
-  { path: '/', icon: Home, label: 'Home', description: 'Learn RAG from scratch' },
-  { path: '/learn', icon: BookOpen, label: 'Learning Center', description: 'Interactive tutorials' },
-  { path: '/playground', icon: Brain, label: 'Playground', description: 'Experiment with concepts' },
-  { path: '/analytics', icon: BarChart3, label: 'Analytics', description: 'Performance metrics' },
-  { path: '/models', icon: Cpu, label: 'Models', description: 'Manage AI models' },
-  { path: '/docs', icon: FileText, label: 'Documentation', description: 'RAG concepts & guides' },
+  { path: '/', icon: Home, label: 'Home', description: 'RAG Studio Pro' },
+  { path: '/builder', icon: Wrench, label: 'Builder', description: 'Build RAG pipelines' },
+  { path: '/docs', icon: FileText, label: 'Documentation', description: 'Multimodal RAG guides' },
 ];
 
 export default function Layout() {
@@ -26,28 +22,28 @@ export default function Layout() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <motion.aside
-          animate={{ width: collapsed ? 72 : 250 }}
+          animate={{ width: collapsed ? 68 : 240 }}
           transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-          className="h-full border-r border-border-primary bg-bg-secondary/80 backdrop-blur-xl flex flex-col shrink-0"
+          className="h-full border-r border-border-primary bg-bg-secondary flex flex-col shrink-0"
         >
           {/* Logo */}
           <div className="h-14 flex items-center px-4 border-b border-border-primary">
             <div className="flex items-center gap-3 min-w-0">
               <motion.div
-                whileHover={{ rotate: 10, scale: 1.05 }}
-                className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent-primary to-accent-dim flex items-center justify-center shrink-0 glow-sm"
+                whileHover={{ rotate: 8, scale: 1.05 }}
+                className="w-8 h-8 rounded-xl bg-gradient-to-br from-accent-primary to-rose-gold flex items-center justify-center shrink-0"
               >
-                <Zap className="w-4.5 h-4.5 text-white" style={{ width: 18, height: 18 }} />
+                <Sparkles className="w-4 h-4 text-white" />
               </motion.div>
               {!collapsed && (
                 <motion.div
-                  initial={{ opacity: 0, x: -10 }}
+                  initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
+                  exit={{ opacity: 0, x: -8 }}
                   className="min-w-0"
                 >
-                  <div className="text-sm font-bold text-text-primary truncate">RAG Studio</div>
-                  <div className="text-[10px] text-accent-secondary font-medium truncate">Pro v1.0</div>
+                  <div className="text-sm font-bold text-text-primary tracking-tight">RAG Studio</div>
+                  <div className="text-[10px] text-accent-secondary font-medium">Pro</div>
                 </motion.div>
               )}
             </div>

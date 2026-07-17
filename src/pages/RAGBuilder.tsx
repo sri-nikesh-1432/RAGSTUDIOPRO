@@ -3,26 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, FileText, Layers, Brain, Database, Search, MessageSquare,
   ChevronRight, CheckCircle2, AlertCircle, Zap, X, FileCode, Globe,
-  BarChart3, Clock
+  BarChart3, Clock, Target
 } from 'lucide-react';
 import { cn, formatNumber } from '../lib/utils';
 import { useAppStore } from '../store/appStore';
 import {
   parseAPI, chunkAPI, embedAPI, vectorAPI, retrieveAPI, llmAPI, healthAPI
 } from '../services/api';
-
-// ─── File Types ────────────────────────────────────────────────────
-const supportedTypes = [
-  { ext: '.pdf', icon: FileText, color: 'text-red-400', label: 'PDF' },
-  { ext: '.txt', icon: FileText, color: 'text-blue-400', label: 'Text' },
-  { ext: '.csv', icon: FileText, color: 'text-emerald-400', label: 'CSV' },
-  { ext: '.md', icon: FileText, color: 'text-purple-400', label: 'Markdown' },
-  { ext: '.html', icon: Globe, color: 'text-orange-400', label: 'HTML' },
-  { ext: '.json', icon: FileCode, color: 'text-yellow-400', label: 'JSON' },
-  { ext: '.docx', icon: FileText, color: 'text-blue-300', label: 'DOCX' },
-  { ext: '.xlsx', icon: FileText, color: 'text-green-400', label: 'Excel' },
-  { ext: '.pptx', icon: FileText, color: 'text-orange-300', label: 'PowerPoint' },
-];
 
 // ─── Chunking Methods ──────────────────────────────────────────────
 const chunkingMethods = [
@@ -52,40 +39,6 @@ const vectorDBs = [
 ];
 
 // ─── LLM Providers ─────────────────────────────────────────────────
-const freeProviders = [
-  {
-    id: 'groq', name: 'Groq (Free)', description: 'Ultra-fast inference, no payment needed',
-    signupUrl: 'https://console.groq.com/keys',
-    models: [
-      { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B', speed: 'Very Fast' },
-      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', speed: 'Fast' },
-      { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', speed: 'Fast' },
-      { id: 'gemma2-9b-it', name: 'Gemma 2 9B', speed: 'Fast' },
-    ],
-  },
-  {
-    id: 'huggingface', name: 'Hugging Face (Free)', description: 'Wide model variety, free API token',
-    signupUrl: 'https://huggingface.co/settings/tokens',
-    models: [
-      { id: 'meta-llama/Llama-3.1-8B-Instruct', name: 'Llama 3.1 8B', speed: 'Medium' },
-      { id: 'mistralai/Mistral-7B-Instruct-v0.3', name: 'Mistral 7B', speed: 'Medium' },
-      { id: 'HuggingFaceH4/zephyr-7b-beta', name: 'Zephyr 7B', speed: 'Medium' },
-      { id: 'microsoft/Phi-3-mini-4k-instruct', name: 'Phi-3 Mini', speed: 'Fast' },
-    ],
-  },
-  {
-    id: 'openrouter', name: 'Open Router (Free)', description: 'Auto-select best free model',
-    signupUrl: 'https://openrouter.ai/keys',
-    models: [
-      { id: 'meta-llama/llama-3.1-8b-instruct:free', name: 'Llama 3.1 8B (Free)', speed: 'Fast' },
-      { id: 'mistralai/mistral-7b-instruct:free', name: 'Mistral 7B (Free)', speed: 'Fast' },
-      { id: 'google/gemma-2-9b-it:free', name: 'Gemma 2 9B (Free)', speed: 'Fast' },
-      { id: 'openrouter/free', name: 'Auto (Best Free)', speed: 'Varies' },
-    ],
-  },
-];
-
-const openaiProvider = { id: 'openai', name: 'OpenAI', description: 'GPT models via API (paid)', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'] };
 
 
 
@@ -399,7 +352,7 @@ function PipelineStepCard({ step, index, isActive, isComplete, onClick, children
 export default function RAGBuilder() {
   const store = useAppStore();
   const [activeStep, setActiveStep] = useState(0);
-  const [isBuilding, setIsBuilding] = useState(false);
+
   const [buildComplete, setBuildComplete] = useState(false);
   const [buildTimeMs, setBuildTimeMs] = useState(0);
   const [query, setQuery] = useState('');
@@ -408,7 +361,7 @@ export default function RAGBuilder() {
   const [parseResult, setParseResult] = useState<any>(null);
   const [chunkResult, setChunkResult] = useState<any>(null);
   const [embedResult, setEmbedResult] = useState<any>(null);
-  const [storeResult, setStoreResult] = useState<any>(null);
+
   const [retrievalResults, setRetrievalResults] = useState<any[]>([]);
   const [generationResult, setGenerationResult] = useState<any>(null);
   const [ollamaModels, setOllamaModels] = useState<string[]>([]);
@@ -498,7 +451,7 @@ export default function RAGBuilder() {
       const metadata = store.chunks.map((c: any) => c.metadata);
       const result = await vectorAPI.add({ ids, embeddings: embedResult.embeddings, texts: chunkTexts, metadata, collection: store.collectionName, store_type: store.vectorStore, dimensions: embedResult.dimensions });
       const storeTime = Date.now() - start;
-      setStoreResult(result); setBuildComplete(true); setBuildTimeMs(Date.now() - (pipelineStartTime || Date.now())); setStepTimings(t => ({ ...t, store: storeTime })); setActiveStep(4);
+      setBuildComplete(true); setBuildTimeMs(Date.now() - (pipelineStartTime || Date.now())); setStepTimings(t => ({ ...t, store: storeTime })); setActiveStep(4);
     } catch (err: any) { setError(err.message); }
     finally { setStepProcessing(p => ({ ...p, 3: false })); }
   };
@@ -527,22 +480,32 @@ export default function RAGBuilder() {
       if (retrieval.success) {
         setRetrievalResults(retrieval.results); store.incrementQueries();
         const context = retrieval.results.map((r: any) => r.text);
+        // Build evidence sources from retrieval results
+        const evidenceSources = retrieval.results.map((r: any, idx: number) => ({
+          rank: idx + 1,
+          score: r.score,
+          text: r.text,
+          source: r.metadata?.source || 'Unknown source',
+          page: r.metadata?.page,
+          chunk_id: r.id,
+          metadata: r.metadata,
+        }));
         let generation;
-        generation = await llmAPI.generate({ query, context, provider: store.llmProvider, model: store.llmModel, api_key: store.openaiApiKey || undefined });
+        generation = await llmAPI.generate({ query, context, provider: store.llmProvider, model: store.llmModel });
         if (generation.success) {
           setGenerationResult(generation);
-          store.addChatMessage({ role: 'assistant', content: generation.answer, metadata: { chunks: retrieval.results.length, sources: retrieval.results.map((r: any) => r.metadata?.source || 'unknown').filter((s: string, i: number, a: string[]) => a.indexOf(s) === i), latency: `${(retrieval.timing.total_ms / 1000).toFixed(2)}s`, confidence: retrieval.results[0]?.score || 0 } });
+          store.addChatMessage({ role: 'assistant', content: generation.answer, metadata: { chunks: retrieval.results.length, sources: retrieval.results.map((r: any) => r.metadata?.source || 'unknown').filter((s: string, i: number, a: string[]) => a.indexOf(s) === i), latency: `${(retrieval.timing.total_ms / 1000).toFixed(2)}s`, confidence: retrieval.results[0]?.score || 0, evidence: evidenceSources } });
         } else {
           let errorMsg = generation.error || 'LLM not available';
           if (errorMsg.includes('getaddrinfo') || errorMsg.includes('DNS') || errorMsg.includes('network')) {
-            errorMsg = `Network error: Cannot reach the LLM API. Check your internet connection, or try Groq (free at console.groq.com/keys).`;
+            errorMsg = `Network error: Cannot reach the LLM API. Check your internet connection and .env configuration.`;
           } else if (errorMsg.includes('not found') || errorMsg.includes('404')) {
             if (store.llmProvider === 'ollama') {
               errorMsg = ollamaModels.length === 0
-                ? 'No Ollama models installed. Run "ollama pull llama3.2" in your terminal, or try a free cloud provider (Groq, Hugging Face, Open Router).'
-                : `Model "${store.llmModel}" not found. Available models: ${ollamaModels.join(', ')}. Pull it with "ollama pull ${store.llmModel}" or try a free cloud provider.`;
+                ? 'No Ollama models installed. Run "ollama pull llama3.2" in your terminal.'
+                : `Model "${store.llmModel}" not found. Available: ${ollamaModels.join(', ')}.`;
             } else {
-              errorMsg += ' Try a different provider or check your API key.';
+              errorMsg += ' Check your .env configuration.';
             }
           }
           store.addChatMessage({ role: 'assistant', content: `I found relevant chunks but couldn't generate an answer: ${errorMsg}` });
@@ -706,170 +669,64 @@ export default function RAGBuilder() {
               <div className="bg-bg-secondary rounded-xl border border-border-primary p-4 space-y-4">
                 {/* Query Input */}
                 <div>
-                  <label className="text-xs font-medium text-text-secondary mb-2 block">Enter your query</label>
+                  <label className="text-xs font-medium text-text-secondary mb-2 block">Ask a question</label>
                   <div className="flex gap-2">
                     <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendQuery()}
                       placeholder={buildComplete ? 'Type a question to ask your documents...' : 'Complete pipeline steps first...'}
                       disabled={!buildComplete}
                       className="flex-1 bg-bg-elevated rounded-lg border border-border-primary px-4 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-primary disabled:opacity-50" />
+                    <button onClick={() => sendQuery()} disabled={!buildComplete || !query.trim() || isSearching}
+                      className="px-4 py-2.5 rounded-lg bg-accent-primary text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-accent-dim transition-all">
+                      {isSearching ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Zap className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
-                {/* Category 0: Quick Start — Groq Free (Recommended) */}
-                <div className="bg-gradient-to-r from-green-500/5 to-emerald-500/5 border border-green-500/20 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <h4 className="text-xs font-semibold text-green-400">Quick Start: Groq Free</h4>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-green-500/10 text-green-400 font-bold">Recommended</span>
+                {/* Provider Selection — read from .env, no API keys in UI */}
+                <div className="bg-bg-elevated rounded-xl border border-border-primary p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-2 h-2 rounded-full bg-accent-primary animate-pulse" />
+                    <h4 className="text-xs font-semibold text-text-primary">LLM Provider</h4>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-accent-glow text-accent-secondary">Configured via .env</span>
                   </div>
-                  <p className="text-[10px] text-text-tertiary mb-3">Fastest free LLM — no credit card needed. Just paste your free API key below.</p>
-                  <div className="space-y-2">
-                    <div>
-                      <label className="text-[10px] font-medium text-text-secondary mb-1 block">Groq API Key (free at console.groq.com/keys)</label>
-                      <div className="flex gap-2">
-                        <input type="password" value={store.openaiApiKey} onChange={(e) => store.setOpenaiApiKey(e.target.value)}
-                          placeholder="gsk_..." className="flex-1 bg-bg-elevated rounded-lg border border-border-primary px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-accent-primary" />
-                        <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer"
-                          className="shrink-0 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 text-[10px] font-medium hover:bg-green-500/20 transition-all">
-                          Get Free Key
-                        </a>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {[{ id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B' }, { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B' }, { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' }, { id: 'gemma2-9b-it', name: 'Gemma 2 9B' }].map((m) => (
-                        <button key={m.id} onClick={() => { store.setLlmProvider('groq'); store.setLlmModel(m.id); }}
-                          className={cn('px-3 py-1 rounded-full text-xs transition-all', store.llmModel === m.id && store.llmProvider === 'groq' ? 'bg-green-500 text-white' : 'bg-bg-elevated text-text-secondary hover:text-text-primary')}>{m.name}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <button onClick={() => sendQuery()} disabled={!buildComplete || !query.trim() || isSearching || !store.openaiApiKey.trim()}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium text-sm hover:shadow-lg hover:shadow-green-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-3">
-                    {isSearching ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Zap className="w-4 h-4" />}
-                    {isSearching ? 'Generating...' : 'Generate with Groq (Free)'}
-                  </button>
-                  {!buildComplete && (
-                    <p className="text-[10px] text-text-tertiary text-center mt-1">Complete Steps 1-4 first to enable generation</p>
-                  )}
-                  {buildComplete && !store.openaiApiKey.trim() && (
-                    <p className="text-[10px] text-amber-400 text-center mt-1">Paste your free Groq API key above to start generating</p>
-                  )}
-                </div>
+                  <p className="text-[10px] text-text-tertiary mb-3">All API keys are read from the backend .env file. No keys are entered in the UI.</p>
 
-                {/* Divider */}
-                <div className="border-t border-border-primary" />
-
-                {/* Category 1: Free Cloud Models */}
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <h4 className="text-xs font-semibold text-emerald-400">Free Cloud Models</h4>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">No payment</span>
-                  </div>
-                  <div className="space-y-2">
-                    {freeProviders.map((p) => (
-                      <div key={p.id}>
-                        <button onClick={() => { store.setLlmProvider(p.id); store.setLlmModel(p.models[0].id); }} className={cn('w-full flex items-center justify-between p-3 rounded-lg border transition-all text-left', store.llmProvider === p.id ? 'bg-accent-glow border-accent-primary/20' : 'bg-bg-elevated border-border-primary hover:border-border-secondary')}>
-                          <div><div className="text-sm font-medium text-text-primary">{p.name}</div><div className="text-[10px] text-text-tertiary">{p.description}</div></div>
-                          {store.llmProvider === p.id && <CheckCircle2 className="w-4 h-4 text-accent-primary" />}
-                        </button>
-                        {store.llmProvider === p.id && (
-                          <div className="ml-4 mt-2 space-y-2">
-                            <div className="flex flex-wrap gap-2">
-                              {p.models.map((m) => (
-                                <button key={m.id} onClick={() => store.setLlmModel(m.id)} className={cn('px-3 py-1 rounded-full text-xs transition-all', store.llmModel === m.id ? 'bg-accent-primary text-white' : 'bg-bg-elevated text-text-secondary hover:text-text-primary')}>{m.name}</button>
-                              ))}
-                            </div>
-                            <div>
-                              <label className="text-[10px] font-medium text-text-secondary mb-1 block">API Key (free)</label>
-                              <input type="password" value={store.openaiApiKey} onChange={(e) => store.setOpenaiApiKey(e.target.value)} placeholder={`Get free key at ${p.signupUrl}`} className="w-full bg-bg-elevated rounded-lg border border-border-primary px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-accent-primary" />
-                              <a href={p.signupUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent-primary hover:underline">Get free API key →</a>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                  {/* Provider grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {[{ id: 'groq', name: 'Groq', desc: 'Ultra-fast' }, { id: 'ollama', name: 'Ollama', desc: 'Local' }, { id: 'openai', name: 'OpenAI', desc: 'GPT' }, { id: 'anthropic', name: 'Anthropic', desc: 'Claude' }, { id: 'google', name: 'Google', desc: 'Gemini' }, { id: 'deepseek', name: 'DeepSeek', desc: 'Chat/Coder' }, { id: 'qwen', name: 'Qwen', desc: 'Qwen 2' }, { id: 'mistral', name: 'Mistral', desc: 'Mistral' }].map((p) => (
+                      <button key={p.id} onClick={() => { store.setLlmProvider(p.id); }}
+                        className={cn('flex flex-col items-center gap-1 p-3 rounded-xl border transition-all text-center', store.llmProvider === p.id ? 'bg-accent-glow border-accent-primary/30 shadow-sm' : 'bg-bg-secondary border-border-primary hover:border-border-secondary')}>
+                        <span className="text-sm font-medium text-text-primary">{p.name}</span>
+                        <span className="text-[9px] text-text-muted">{p.desc}</span>
+                      </button>
                     ))}
                   </div>
                 </div>
 
-                {/* Divider */}
-                <div className="border-t border-border-primary" />
-
-                {/* Category 2: Ollama Local */}
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-500" />
-                    <h4 className="text-xs font-semibold text-blue-400">Ollama (Local)</h4>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">Run locally</span>
-                  </div>
-                  <button onClick={() => { store.setLlmProvider('ollama'); store.setLlmModel('llama3.2'); }} className={cn('w-full flex items-center justify-between p-3 rounded-lg border transition-all text-left', store.llmProvider === 'ollama' ? 'bg-accent-glow border-accent-primary/20' : 'bg-bg-elevated border-border-primary hover:border-border-secondary')}>
-                    <div><div className="text-sm font-medium text-text-primary">Ollama (Local)</div><div className="text-[10px] text-text-tertiary">Run models on your machine • 100% private</div></div>
-                    {store.llmProvider === 'ollama' && <CheckCircle2 className="w-4 h-4 text-accent-primary" />}
-                  </button>
-                  {store.llmProvider === 'ollama' && (
-                    <div className="ml-4 mt-2 space-y-2">
-                      {ollamaModels.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {ollamaModels.map((m) => (
-                            <button key={m} onClick={() => store.setLlmModel(m)} className={cn('px-3 py-1 rounded-full text-xs transition-all', store.llmModel === m ? 'bg-accent-primary text-white' : 'bg-bg-elevated text-text-secondary hover:text-text-primary')}>{m}</button>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs space-y-2">
-                          <p className="text-blue-400 font-medium">No models installed yet</p>
-                          <p className="text-text-tertiary">Install Ollama and pull a model:</p>
-                          <div className="bg-bg-elevated rounded-lg p-2 font-mono text-[10px] text-text-secondary space-y-1">
-                            <div><span className="text-text-muted"># 1. Install Ollama</span></div>
-                            <div>curl -fsSL https://ollama.com/install.sh | sh</div>
-                            <div className="mt-1"><span className="text-text-muted"># 2. Pull a model</span></div>
-                            <div>ollama pull llama3.2</div>
-                            <div><span className="text-text-muted"># or other models:</span></div>
-                            <div>ollama pull mistral</div>
-                            <div>ollama pull gemma2</div>
-                          </div>
-                          <a href="https://ollama.com" target="_blank" rel="noopener noreferrer" className="text-accent-primary hover:underline text-[10px]">Visit ollama.com for more models →</a>
-                        </div>
-                      )}
+                {/* Ollama model selector */}
+                {store.llmProvider === 'ollama' && ollamaModels.length > 0 && (
+                  <div className="bg-bg-elevated rounded-xl border border-border-primary p-4">
+                    <h4 className="text-xs font-semibold text-text-primary mb-2">Ollama Models</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {ollamaModels.map((m) => (
+                        <button key={m} onClick={() => store.setLlmModel(m)}
+                          className={cn('px-3 py-1.5 rounded-lg text-xs font-medium transition-all', store.llmModel === m ? 'bg-accent-primary text-white' : 'bg-bg-secondary text-text-secondary hover:text-text-primary border border-border-primary')}>{m}</button>
+                      ))}
                     </div>
-                  )}
-                </div>
-
-                {/* Divider */}
-                <div className="border-t border-border-primary" />
-
-                {/* Category 3: OpenAI */}
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-2 rounded-full bg-amber-500" />
-                    <h4 className="text-xs font-semibold text-amber-400">OpenAI</h4>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400">Paid API</span>
-                  </div>
-                  <button onClick={() => { store.setLlmProvider('openai'); store.setLlmModel('gpt-4o-mini'); }} className={cn('w-full flex items-center justify-between p-3 rounded-lg border transition-all text-left', store.llmProvider === 'openai' ? 'bg-accent-glow border-accent-primary/20' : 'bg-bg-elevated border-border-primary hover:border-border-secondary')}>
-                    <div><div className="text-sm font-medium text-text-primary">OpenAI</div><div className="text-[10px] text-text-tertiary">GPT models via API • Requires API key</div></div>
-                    {store.llmProvider === 'openai' && <CheckCircle2 className="w-4 h-4 text-accent-primary" />}
-                  </button>
-                  {store.llmProvider === 'openai' && (
-                    <div className="ml-4 mt-2 space-y-2">
-                      <div className="flex flex-wrap gap-2">
-                        {openaiProvider.models.map((m) => (
-                          <button key={m} onClick={() => store.setLlmModel(m)} className={cn('px-3 py-1 rounded-full text-xs transition-all', store.llmModel === m ? 'bg-accent-primary text-white' : 'bg-bg-elevated text-text-secondary hover:text-text-primary')}>{m}</button>
-                        ))}
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-medium text-text-secondary mb-1 block">API Key</label>
-                        <input type="password" value={store.openaiApiKey} onChange={(e) => store.setOpenaiApiKey(e.target.value)} placeholder="sk-..." className="w-full bg-bg-elevated rounded-lg border border-border-primary px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-accent-primary" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {generationResult && (
-                  <div className="bg-bg-elevated rounded-lg p-3 text-xs text-text-tertiary space-y-1">
-                    <div>🤖 {generationResult.model} via {generationResult.provider}</div>
-                    <div>📊 Tokens: {generationResult.total_tokens} • Time: {generationResult.total_time_ms?.toFixed(0)}ms</div>
                   </div>
                 )}
 
-
+                {/* Generation Result */}
+                {generationResult && (
+                  <div className="bg-bg-elevated rounded-xl border border-border-primary p-4">
+                    <h4 className="text-xs font-semibold text-text-primary mb-2">Generation Stats</h4>
+                    <div className="flex flex-wrap gap-3 text-xs text-text-tertiary">
+                      <span>🤖 {generationResult.model} via {generationResult.provider}</span>
+                      <span>📊 {generationResult.total_tokens} tokens</span>
+                      <span>⏱️ {generationResult.total_time_ms?.toFixed(0)}ms</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </PipelineStepCard>
 
@@ -879,7 +736,7 @@ export default function RAGBuilder() {
             </PipelineStepCard>
           </div>
 
-          {/* Chat Panel */}
+          {/* Chat Panel + Evidence Timeline */}
           <div className="lg:col-span-1">
             <div className="bg-bg-secondary rounded-xl border border-border-primary h-[calc(100vh-120px)] sticky top-20 flex flex-col">
               <div className="p-4 border-b border-border-primary">
@@ -896,9 +753,32 @@ export default function RAGBuilder() {
                     {msg.metadata && (
                       <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-text-tertiary">
                         <span>📄 {msg.metadata.chunks} chunks</span>
-                        {msg.metadata.sources && <span>📎 {msg.metadata.sources.join(', ')}</span>}
                         <span>⏱️ {msg.metadata.latency}</span>
                         {msg.metadata.confidence !== undefined && <span>🎯 {(msg.metadata.confidence * 100).toFixed(0)}%</span>}
+                      </div>
+                    )}
+                    {/* Evidence Timeline */}
+                    {msg.metadata?.evidence && msg.metadata.evidence.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-border-primary">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Target className="w-3 h-3 text-accent-primary" />
+                          <span className="text-[10px] font-semibold text-text-primary uppercase tracking-wider">Evidence Timeline</span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {msg.metadata.evidence.map((ev: any, idx: number) => (
+                            <div key={idx} className="flex items-start gap-2 px-2 py-1.5 rounded-lg bg-bg-primary/50 hover:bg-bg-hover transition-colors cursor-pointer group">
+                              <span className="text-[10px] font-mono text-accent-primary shrink-0 mt-0.5">#{ev.rank}</span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-medium text-text-primary truncate">{ev.source}</span>
+                                  {ev.page && <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent-glow text-accent-secondary">p.{ev.page}</span>}
+                                  <span className="text-[9px] text-text-muted ml-auto shrink-0">{(ev.score * 100).toFixed(0)}%</span>
+                                </div>
+                                <p className="text-[10px] text-text-tertiary line-clamp-1 mt-0.5 group-hover:text-text-secondary transition-colors">{ev.text}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </motion.div>
