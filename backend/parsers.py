@@ -42,6 +42,26 @@ def detect_file_type(file_path: str) -> str:
         ".tiff": "image",
         ".webp": "image",
         ".zip": "zip",
+        # Audio files
+        ".mp3": "audio",
+        ".wav": "audio",
+        ".ogg": "audio",
+        ".flac": "audio",
+        ".aac": "audio",
+        ".m4a": "audio",
+        ".wma": "audio",
+        ".opus": "audio",
+        # Video files
+        ".mp4": "video",
+        ".avi": "video",
+        ".mkv": "video",
+        ".mov": "video",
+        ".wmv": "video",
+        ".flv": "video",
+        ".webm": "video",
+        ".m4v": "video",
+        ".mpg": "video",
+        ".mpeg": "video",
     }
     return type_map.get(ext, "unknown")
 
@@ -511,6 +531,29 @@ def parse_zip(file_path: str) -> Tuple[str, Dict[str, Any]]:
         return "", {"error": str(e)}
 
 
+# ─── Audio/Video Parser (binary - no text extraction) ──────────────
+
+def parse_binary(file_path: str) -> Tuple[str, Dict[str, Any]]:
+    """Handle binary files (audio, video, etc.) - no text extraction.
+    Returns file metadata quickly without trying to read the binary content."""
+    file_meta = get_file_metadata(file_path)
+    ext = Path(file_path).suffix.lower()
+    file_type_name = ext.lstrip('.').upper() if ext else 'BINARY'
+    file_size = file_meta.get('file_size', 0)
+    file_name = file_meta.get('file_name', 'unknown')
+    
+    description = f"[Uploaded: {file_name} ({_human_size(file_size)}) - {file_type_name} file]"
+    
+    metadata = {
+        **file_meta,
+        "extension": ext,
+        "content_type": "binary",
+        "note": f"Binary file uploaded. No text could be extracted from {file_type_name} files. The file is stored for reference.",
+    }
+    
+    return description, metadata
+
+
 # ─── Main Parse Function ──────────────────────────────────────────
 
 def parse_file(file_path: str, extract_metadata: bool = True) -> Dict[str, Any]:
@@ -542,6 +585,8 @@ def parse_file(file_path: str, extract_metadata: bool = True) -> Dict[str, Any]:
         "xml": parse_xml,
         "image": parse_image,
         "zip": parse_zip,
+        "audio": parse_binary,
+        "video": parse_binary,
     }
 
     parser = parser_map.get(file_type)
@@ -558,16 +603,18 @@ def parse_file(file_path: str, extract_metadata: bool = True) -> Dict[str, Any]:
                 **_analyze_text(text),
             }
         except Exception:
-            # Binary file or unreadable - return success with file info so upload doesn't fail
+            # Binary file or unreadable - extract filename info and return success
             ext = Path(file_path).suffix.lower() or ".unknown"
+            file_name = os.path.basename(file_path)
+            file_size = file_meta.get('file_size', 0)
             return {
                 "success": True,
-                "text": f"[Binary file: {os.path.basename(file_path)} ({_human_size(file_meta.get('file_size', 0))})]",
-                "file_name": os.path.basename(file_path),
-                "file_type": "binary",
-                "file_size": file_meta.get("file_size", 0),
-                "metadata": {**file_meta, "extension": ext, "binary": True, "note": "Binary file uploaded - text extraction not available for this file type"},
-                "characters": 0,
+                "text": f"[Uploaded: {file_name} ({_human_size(file_size)}) - {ext} file]",
+                "file_name": file_name,
+                "file_type": ext.lstrip('.').upper() if ext else 'BINARY',
+                "file_size": file_size,
+                "metadata": {**file_meta, "extension": ext, "note": f"File uploaded successfully: {file_name}"},
+                "characters": file_size,
                 "words": 0,
             }
 

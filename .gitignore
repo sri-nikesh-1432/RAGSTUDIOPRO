@@ -67,6 +67,9 @@ temp/
 *.tmp
 *.bak
 
+# Test files
+e2e_test.py
+
 # Ollama
 ollama/
 

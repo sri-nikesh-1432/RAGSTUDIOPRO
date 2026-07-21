@@ -14,8 +14,8 @@ html {
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: #fefcf8;
-  color: #1a1a1a;
+  background: #faf7f2;
+  color: #1a1816;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -30,22 +30,22 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d4cabb;
+  background: #d9cebe;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #b07d56;
+  background: #c4a882;
 }
 
 /* Selection */
 ::selection {
-  background: rgba(176, 125, 86, 0.25);
-  color: #1a1a1a;
+  background: rgba(212, 165, 116, 0.3);
+  color: #1a1816;
 }
 
 /* Focus Ring */
 *:focus-visible {
-  outline: 2px solid rgba(176, 125, 86, 0.5);
+  outline: 2px solid rgba(212, 165, 116, 0.5);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -53,21 +53,21 @@ body {
 /* ─── Glass Morphism ────────────────────────────────────────────── */
 @layer utilities {
   .glass {
-    background: rgba(254, 252, 248, 0.75);
+    background: rgba(250, 247, 242, 0.75);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid rgba(232, 224, 212, 0.6);
+    border: 1px solid rgba(233, 225, 210, 0.6);
   }
 
   .glass-strong {
-    background: rgba(254, 252, 248, 0.92);
+    background: rgba(250, 247, 242, 0.92);
     backdrop-filter: blur(40px) saturate(200%);
     -webkit-backdrop-filter: blur(40px) saturate(200%);
-    border: 1px solid rgba(232, 224, 212, 0.8);
+    border: 1px solid rgba(233, 225, 210, 0.8);
   }
 
   .gradient-text {
-    background: linear-gradient(135deg, #b07d56 0%, #d4a574 40%, #b76e79 70%, #b07d56 100%);
+    background: linear-gradient(135deg, #d4a574 0%, #e3c9a8 30%, #c4956a 60%, #b8845a 100%);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -75,8 +75,8 @@ body {
     animation: gradientShift 4s ease infinite;
   }
 
-  .gradient-text-hero {
-    background: linear-gradient(135deg, #1a1a1a 0%, #b07d56 40%, #b76e79 70%, #d4a574 100%);
+  .gradient-text-duo {
+    background: linear-gradient(135deg, #d4a574 0%, #c4956a 40%, #e3c9a8 70%, #d4a574 100%);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -84,20 +84,49 @@ body {
     animation: gradientShift 6s ease infinite;
   }
 
+  .gradient-text-hero {
+    background: linear-gradient(135deg, #1a1816 0%, #d4a574 30%, #c4956a 60%, #e3c9a8 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 6s ease infinite;
+  }
+
+  .gradient-bg-warm {
+    background: linear-gradient(135deg, #faf7f2 0%, #f5f0e8 30%, #ede7da 60%, #f5f0e8 100%);
+    background-size: 200% 200%;
+    animation: gradientShift 8s ease infinite;
+  }
+
+  .gradient-bg-accent {
+    background: linear-gradient(135deg, #d4a574, #c4956a, #e3c9a8, #b8845a);
+    background-size: 300% 300%;
+    animation: gradientShift 6s ease infinite;
+  }
+
   .glow-sm {
-    box-shadow: 0 0 10px rgba(176, 125, 86, 0.1), 0 0 30px rgba(176, 125, 86, 0.05);
+    box-shadow: 0 0 10px rgba(212, 165, 116, 0.1), 0 0 30px rgba(212, 165, 116, 0.05);
   }
 
   .glow-md {
-    box-shadow: 0 0 20px rgba(176, 125, 86, 0.15), 0 0 60px rgba(176, 125, 86, 0.08);
+    box-shadow: 0 0 20px rgba(212, 165, 116, 0.15), 0 0 60px rgba(212, 165, 116, 0.08);
   }
 
   .glow-lg {
-    box-shadow: 0 0 40px rgba(176, 125, 86, 0.2), 0 0 100px rgba(176, 125, 86, 0.1);
+    box-shadow: 0 0 40px rgba(212, 165, 116, 0.2), 0 0 100px rgba(212, 165, 116, 0.1);
+  }
+
+  .shadow-warm {
+    box-shadow: 0 2px 16px rgba(180, 132, 90, 0.08), 0 0 0 1px rgba(212, 165, 116, 0.06);
+  }
+
+  .shadow-warm-lg {
+    box-shadow: 0 8px 32px rgba(180, 132, 90, 0.12), 0 0 0 1px rgba(212, 165, 116, 0.08);
   }
 
   .text-shadow-soft {
-    text-shadow: 0 1px 3px rgba(26, 26, 26, 0.08);
+    text-shadow: 0 1px 3px rgba(26, 24, 22, 0.08);
   }
 
   .animate-in {
@@ -109,7 +138,7 @@ body {
     background: linear-gradient(
       110deg,
       transparent 33%,
-      rgba(176, 125, 86, 0.06) 50%,
+      rgba(212, 165, 116, 0.06) 50%,
       transparent 67%
     );
     background-size: 300% 100%;
@@ -127,7 +156,7 @@ body {
     top: 0; left: 0; right: 0; bottom: 0;
     background: radial-gradient(
       600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-      rgba(176, 125, 86, 0.04),
+      rgba(212, 165, 116, 0.06),
       transparent 40%
     );
     opacity: 0;
@@ -137,6 +166,26 @@ body {
   }
   .spotlight:hover::before {
     opacity: 1;
+  }
+
+  /* Card beige theme */
+  .card-beige {
+    background: #fdfcfa;
+    border: 1px solid #e8e0d4;
+    border-radius: 1rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .card-beige:hover {
+    border-color: #d4a574;
+    box-shadow: 0 4px 24px rgba(212, 165, 116, 0.1);
+    transform: translateY(-2px);
+  }
+
+  /* Frosted accent */
+  .frost-accent {
+    background: rgba(212, 165, 116, 0.08);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(212, 165, 116, 0.15);
   }
 }
 
@@ -155,11 +204,15 @@ body {
 }
 @keyframes grid-pulse {
   0%, 100% { opacity: 0.02; }
-  50% { opacity: 0.04; }
+  50% { opacity: 0.035; }
 }
 @keyframes float-slow {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
   50% { transform: translateY(-15px) rotate(2deg); }
+}
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.03); opacity: 0.8; }
 }
 
 /* ─── Premium Button Styles ─────────────────────────────────────── */
@@ -172,7 +225,7 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+  background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -190,7 +243,7 @@ body {
 }
 .card-premium:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(176, 125, 86, 0.1);
+  box-shadow: 0 8px 32px rgba(212, 165, 116, 0.1);
 }
 
 /* ─── Code Blocks ───────────────────────────────────────────────── */
@@ -207,5 +260,5 @@ pre code {
   color: #7a7268 !important;
 }
 .js-plotly-plot .plotly .modebar-btn:hover {
-  color: #b07d56 !important;
+  color: #d4a574 !important;
 }

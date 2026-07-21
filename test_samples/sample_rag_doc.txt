@@ -1,0 +1,17 @@
+RAG Studio Pro - End to End Test Document
+
+Artificial Intelligence has transformed the way we interact with information. Retrieval-Augmented Generation (RAG) combines the power of large language models with external knowledge retrieval to produce accurate, context-aware responses.
+
+How RAG Works:
+1. Ingestion: Documents are parsed and split into chunks
+2. Embedding: Each chunk is converted into a vector embedding using models like MiniLM
+3. Storage: Vectors are stored in a FAISS index or ChromaDB for fast similarity search
+4. Retrieval: When a user asks a question, it's embedded and used to find the most relevant chunks
+5. Generation: The retrieved chunks are fed as context to a Groq LLM (Llama 3, Mixtral, etc.)
+6. Answer: The LLM generates a response grounded in the provided context
+
+Hybrid Search combines dense vector search with sparse keyword search to improve retrieval quality. RRF (Reciprocal Rank Fusion) merges results from both approaches.
+
+GroqCloud provides ultra-fast LLM inference using custom LPU hardware. Models available include Llama 3.1 8B, Llama 3.3 70B, Mixtral 8x7B, and Gemma 2 9B.
+
+The Evidence Timeline feature shows exactly which chunks were used to generate each answer, along with relevance scores.

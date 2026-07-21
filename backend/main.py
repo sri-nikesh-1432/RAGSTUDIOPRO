@@ -8,12 +8,15 @@ import sys
 import json
 import time
 import tracemalloc
+import shutil
+import tempfile
+from pathlib import Path
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 # ─── Local Modules ─────────────────────────────────────────────────
@@ -33,6 +36,20 @@ from projects import (
     create_project, save_project, load_project, delete_project,
     list_projects, save_file_to_project, export_project
 )
+from jobs import job_manager, STAGES
+
+# ─── Load .env File ────────────────────────────────────────────────
+
+_env_path = Path(__file__).parent / ".env"
+try:
+    from dotenv import load_dotenv
+    if _env_path.exists():
+        load_dotenv(str(_env_path))
+    else:
+        print(f"[ENV] No .env file found at {_env_path}. Using system environment variables.")
+        print("   See backend/.env.example for all configurable variables.")
+except ImportError:
+    print("[WARN] python-dotenv not installed. Run: pip install python-dotenv")
 
 # ─── App Setup ─────────────────────────────────────────────────────
 
@@ -61,12 +78,31 @@ vector_manager = VectorStoreManager()
 llm_generator = LLMGenerator()
 pipeline_tracker = PipelineTracker()
 
+# Streaming upload chunk size (1MB)
+STREAM_CHUNK_SIZE = 1024 * 1024
+
 # Store parsed text and chunks in memory for pipeline
 session_data: Dict[str, Any] = {
     "parsed_files": {},
     "chunks": {},
     "embeddings": {},
 }
+
+# ─── Pre-warm Embedding Model at Startup ─────────────────────────
+
+print("[STARTUP] Pre-warming embedding model (all-MiniLM-L6-v2)...")
+try:
+    import time as _time
+    _warm_start = _time.time()
+    from sentence_transformers import SentenceTransformer
+    _warm_model = SentenceTransformer('all-MiniLM-L6-v2')
+    # Run a quick encode to ensure model is fully initialized
+    _warm_model.encode(['Warmup'], normalize_embeddings=True)
+    _warm_time = (_time.time() - _warm_start) * 1000
+    print(f"[STARTUP] Embedding model loaded in {_warm_time:.0f}ms ✓")
+except Exception as _warm_err:
+    print(f"[STARTUP] Could not pre-warm embedding model: {_warm_err}")
+    print("[STARTUP] Model will be loaded on first request (may cause delay)")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -102,6 +138,34 @@ async def check_packages():
 
 
 # ═══════════════════════════════════════════════════════════════════
+#  ENV CONFIGURATION CHECK
+# ═══════════════════════════════════════════════════════════════════
+
+@app.get("/api/env")
+async def check_env():
+    """Check which API keys and config are available from the environment."""
+    return {
+        "env_file_loaded": _env_path.exists(),
+        "providers": {
+            "groq": bool(os.environ.get("GROQ_API_KEY", "")),
+            "openai": bool(os.environ.get("OPENAI_API_KEY", "")),
+            "anthropic": bool(os.environ.get("ANTHROPIC_API_KEY", "")),
+            "google": bool(os.environ.get("GOOGLE_API_KEY", "")),
+            "huggingface": bool(os.environ.get("HF_API_KEY", "")),
+            "openrouter": bool(os.environ.get("OPENROUTER_API_KEY", "")),
+            "deepseek": bool(os.environ.get("DEEPSEEK_API_KEY", "")),
+            "mistral": bool(os.environ.get("MISTRAL_API_KEY", "")),
+            "ollama": bool(os.environ.get("OLLAMA_BASE_URL", "")),
+        },
+        "settings": {
+            "cors_origins": os.environ.get("RAG_CORS_ORIGINS", "default"),
+            "max_upload_size_mb": int(os.environ.get("RAG_MAX_UPLOAD_SIZE", str(100 * 1024 * 1024))) / (1024 * 1024),
+            "chromadb_path": os.environ.get("RAG_CHROMADB_PATH", "default"),
+            "llm_timeout": os.environ.get("RAG_LLM_TIMEOUT", "120"),
+        },
+    }
+
+# ═══════════════════════════════════════════════════════════════════
 #  FILE PARSING
 # ═══════════════════════════════════════════════════════════════════
 
@@ -110,7 +174,6 @@ async def parse_uploaded_file(file: UploadFile = File(...)):
     """Parse an uploaded file and extract text."""
     tmp_path = None
     try:
-        import tempfile
         suffix = os.path.splitext(file.filename or "")[1]
         content = await file.read()
 
@@ -207,9 +270,212 @@ async def supported_file_types():
             "json": {"extensions": [".json", ".jsonl"], "parser": "json"},
             "xml": {"extensions": [".xml", ".svg"], "parser": "xml"},
             "image": {"extensions": [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".webp"], "parser": "pytesseract"},
+            "audio": {"extensions": [".mp3", ".wav", ".ogg", ".flac", ".aac", ".m4a", ".wma", ".opus"], "parser": "binary"},
+            "video": {"extensions": [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".m4v", ".mpg", ".mpeg"], "parser": "binary"},
             "zip": {"extensions": [".zip"], "parser": "zipfile"},
         }
     }
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  STREAMING UPLOAD (async, non-blocking for large files)
+# ═══════════════════════════════════════════════════════════════════
+
+def _process_upload_background(job_id: str):
+    """Background task: parse file, generate embeddings, store vectors.
+    Runs in a thread so the upload endpoint returns immediately.
+    """
+    import gc
+    job = job_manager.get_job(job_id)
+    if not job:
+        return
+
+    try:
+        tmp_path = job.tmp_path
+        if not tmp_path or not os.path.exists(tmp_path):
+            job_manager.fail_job(job_id, "Uploaded file not found on disk")
+            return
+
+        job_manager.update_stage(job_id, "parsing")
+
+        # Parse the file
+        import gc as gc_module
+        parse_result = parse_file(tmp_path)
+
+        if not parse_result.get("success"):
+            job_manager.fail_job(job_id, parse_result.get("error", "Parse failed"))
+            return
+
+        text = parse_result.get("text", "")
+        metadata = parse_result.get("metadata", {})
+
+        # Determine category and appropriate processing
+        file_type = parse_result.get("file_type", "unknown")
+        category = job.category
+
+        # For text-based files: chunk, embed, store
+        if category == "text" and text and len(text) > 10:
+            job_manager.update_stage(job_id, "generating_embeddings")
+
+            # Chunk the text
+            chunk_result = chunk_text(text, method="recursive", chunk_size=500, overlap=50)
+            chunks = chunk_result.get("chunks", [])
+
+            if chunks:
+                chunk_texts = [c["text"] for c in chunks]
+
+                # Generate embeddings
+                embed_result = generate_embeddings(chunk_texts, "all-MiniLM-L6-v2")
+
+                if embed_result.success and embed_result.embeddings:
+                    job_manager.update_stage(job_id, "saving_results")
+
+                    # Store in vector DB
+                    ids = [c["id"] for c in chunks]
+                    meta_list = [c.get("metadata", {}) for c in chunks]
+                    store = vector_manager.get_store("faiss_flat", "default", embed_result.dimensions)
+                    store.add(ids, embed_result.embeddings, meta_list, texts=chunk_texts)
+
+                    metadata["vector_count"] = store.count()
+                    metadata["chunk_count"] = len(chunks)
+
+        # Cache in session
+        file_name = parse_result.get("file_name", job.file_name)
+        session_data["parsed_files"][file_name] = parse_result
+
+        # Mark job as completed
+        job_manager.complete_job(job_id, {
+            "success": True,
+            "text": text,
+            "file_name": file_name,
+            "file_type": parse_result.get("file_type", category),
+            "file_size": parse_result.get("file_size", job.file_size),
+            "characters": parse_result.get("characters", len(text)),
+            "words": parse_result.get("words", 0),
+            "pages": parse_result.get("pages"),
+            "language": parse_result.get("language"),
+            "metadata": metadata,
+        })
+
+    except Exception as e:
+        job_manager.fail_job(job_id, str(e))
+    finally:
+        # Clean up temp file
+        job = job_manager.get_job(job_id)
+        if job and job.tmp_path and os.path.exists(job.tmp_path):
+            try:
+                os.unlink(job.tmp_path)
+                job.tmp_path = None
+            except Exception:
+                pass
+        gc.collect()
+
+
+@app.post("/api/upload/stream")
+async def streaming_upload(request: Request, background_tasks: BackgroundTasks,
+    filename: str = Query("", alias="filename"),
+    category: str = Query("text", alias="category")):
+    """Stream a file upload in chunks, return job ID immediately.
+    The file is saved to disk incrementally and processed in the background.
+    """
+    if not filename:
+        filename = f"upload_{int(time.time())}"
+
+    # Determine file extension and category
+    suffix = os.path.splitext(filename)[1].lower()
+    if not category or category not in ("text", "audio", "video"):
+        # Auto-detect from extension
+        ext_map = {
+            ".mp3": "audio", ".wav": "audio", ".ogg": "audio", ".flac": "audio",
+            ".aac": "audio", ".m4a": "audio", ".wma": "audio", ".opus": "audio",
+            ".mp4": "video", ".avi": "video", ".mkv": "video", ".mov": "video",
+            ".wmv": "video", ".flv": "video", ".webm": "video", ".m4v": "video",
+            ".mpg": "video", ".mpeg": "video",
+        }
+        category = ext_map.get(suffix, "text")
+
+    # Create job
+    job = job_manager.create_job(filename, 0, category)
+    job_manager.update_stage(job.job_id, "saving")
+
+    # Save stream to temp file in chunks (never load entire file into RAM)
+    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix, prefix="rag_stream_")
+    tmp_path = tmp_file.name
+    total_bytes = 0
+
+    try:
+        # Stream the request body in chunks
+        async for chunk in request.stream():
+            tmp_file.write(chunk)
+            total_bytes += len(chunk)
+
+            # Update file size and progress periodically
+            if total_bytes % (STREAM_CHUNK_SIZE * 4) == 0:
+                job.file_size = total_bytes
+                upload_progress = min(90, (total_bytes / max(total_bytes, 1)) * 100)
+                job_manager.update_progress(job.job_id, upload_progress)
+
+        tmp_file.close()
+        job.file_size = total_bytes
+
+        # Verify file size limit
+        if total_bytes > MAX_UPLOAD_SIZE:
+            os.unlink(tmp_path)
+            job_manager.fail_job(job.job_id,
+                f"File too large: {total_bytes} bytes exceeds limit of {MAX_UPLOAD_SIZE} bytes")
+            return {
+                "job_id": job.job_id,
+                "status": "failed",
+                "error": f"File exceeds maximum upload size of {MAX_UPLOAD_SIZE // (1024*1024)}MB"
+            }
+
+        # Store temp path and schedule background processing
+        job.tmp_path = tmp_path
+        background_tasks.add_task(_process_upload_background, job.job_id)
+
+        # Return immediately with the job ID
+        return {
+            "job_id": job.job_id,
+            "file_name": filename,
+            "file_size": total_bytes,
+            "category": category,
+            "status": "running",
+            "message": "Upload complete. Processing in background.",
+        }
+
+    except Exception as e:
+        tmp_file.close()
+        if os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+        job_manager.fail_job(job.job_id, str(e))
+        return {
+            "job_id": job.job_id,
+            "status": "failed",
+            "error": str(e),
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  JOB STATUS (for async upload polling)
+# ═══════════════════════════════════════════════════════════════════
+
+@app.get("/api/jobs/{job_id}")
+async def get_job_status(job_id: str):
+    """Get the status of an async upload processing job."""
+    job = job_manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+    return job.to_dict()
+
+
+@app.get("/api/jobs")
+async def list_jobs(limit: int = Query(50, ge=1, le=200)):
+    """List recent upload processing jobs."""
+    job_manager.cleanup_old_jobs()
+    return {"jobs": job_manager.list_jobs(limit=limit)}
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -564,8 +830,8 @@ async def run_full_pipeline(request: PipelineRunRequestModel):
         chunks = chunk_result.get("chunks", [])
         chunk_texts = [c["text"] for c in chunks]
         pipeline_tracker.complete_step(run_id, "chunk", chunk_texts[0][:200] if chunk_texts else "", len(chunks), {
-            "method": request.get("chunking_method"),
-            "chunk_size": request.get("chunk_size"),
+            "method": request.chunking_method,
+            "chunk_size": request.chunk_size,
             "count": len(chunks),
         })
 

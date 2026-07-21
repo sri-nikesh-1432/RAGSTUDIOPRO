@@ -42,10 +42,14 @@ export interface ParseResult {
 }
 
 export const parseAPI = {
-  uploadFile: async (file: File): Promise<ParseResult> => {
+  uploadFile: async (file: File, signal?: AbortSignal): Promise<ParseResult> => {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await fetch(`${API_BASE}/parse/upload`, { method: 'POST', body: formData });
+    const res = await fetch(`${API_BASE}/parse/upload`, {
+      method: 'POST',
+      body: formData,
+      signal,
+    });
     return res.json();
   },
   parsePath: (filePath: string) =>
@@ -300,6 +304,64 @@ export const analyticsAPI = {
   system: () => apiFetch<Record<string, any>>('/analytics/system'),
   session: () => apiFetch<Record<string, any>>('/analytics/session'),
 };
+
+// ─── Async Upload Jobs (Streaming) ────────────────────────────────
+
+export interface JobInfo {
+  job_id: string;
+  file_name: string;
+  file_size: number;
+  category: string;
+  status: string;
+  stage: string;
+  stage_label: string;
+  progress: number;
+  error?: string;
+  result?: any;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string;
+}
+
+export const uploadAPI = {
+  /**
+   * Upload a file via raw binary streaming. Returns a job ID immediately.
+   * The File object (a Blob) is sent directly as the request body — no FormData,
+   * no multipart encoding, no main-thread blocking. The backend reads the raw
+   * stream from request.stream() and writes it to disk incrementally.
+   */
+  streamUpload: async (file: File, signal?: AbortSignal): Promise<{ job_id: string; file_name: string; file_size: number; category: string; status: string; error?: string; message?: string }> => {
+    const url = `${API_BASE}/upload/stream?filename=${encodeURIComponent(file.name)}&category=${encodeURIComponent(detectCategory(file.name))}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: file,  // File is a Blob — browser streams it natively, no main-thread blocking
+      signal,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || err.error || `Upload failed: ${res.status}`);
+    }
+    return res.json();
+  },
+
+  /** Get job status by ID */
+  getJobStatus: (jobId: string) =>
+    apiFetch<JobInfo>(`/jobs/${jobId}`),
+
+  /** List recent jobs */
+  listJobs: (limit?: number) =>
+    apiFetch<{ jobs: JobInfo[] }>(`/jobs${limit ? `?limit=${limit}` : ''}`),
+};
+
+function detectCategory(fileName: string): string {
+  const ext = '.' + fileName.split('.').pop()?.toLowerCase();
+  const audioExts = new Set(['.mp3','.wav','.ogg','.flac','.aac','.m4a','.wma','.opus']);
+  const videoExts = new Set(['.mp4','.avi','.mkv','.mov','.wmv','.flv','.webm','.m4v','.mpg','.mpeg']);
+  if (audioExts.has(ext)) return 'audio';
+  if (videoExts.has(ext)) return 'video';
+  return 'text';
+}
 
 // ─── Projects ──────────────────────────────────────────────────────
 

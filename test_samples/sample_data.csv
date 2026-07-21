@@ -1,0 +1,7 @@
+This is a sample CSV file with RAG-related data
+name,category,description
+MiniLM,Embedding,Fast embedding model with 384 dimensions
+FAISS,VectorStore,Facebook AI Similarity Search
+Groq,LLM,Ultra-fast LPU inference
+ChromaDB,VectorStore,Open-source embedding database
+Llama3,Model,Meta's latest open-source LLM

@@ -838,26 +838,37 @@ User Question: {query}`} />
           {/* ═══════════════════ CONFIGURATION ═══════════════════ */}
 
           {/* LLM Providers */}
-          <DocSection id="providers" title="LLM Providers" icon={Globe}>
+          <DocSection id="providers" title="Groq Cloud" icon={Zap}>
             <p className="text-sm text-text-secondary leading-relaxed">
-              RAG Studio Pro supports multiple LLM providers. The active provider is configured via environment variables — users never enter API keys in the UI.
+              RAG Studio Pro uses <strong className="text-text-primary">GroqCloud</strong> for lightning-fast LLM inference. Just set your <code className="text-accent-primary font-mono">GROQ_API_KEY</code> in the backend <code className="text-accent-primary font-mono">.env</code> file and you're ready to go.
             </p>
-            <ComparisonTable
-              headers={['Provider', 'Models', 'Setup']}
-              rows={[
-                ['Groq', 'Llama 3, Mixtral, Gemma', 'Set GROQ_API_KEY in .env'],
-                ['OpenAI', 'GPT-4o, GPT-4, GPT-3.5', 'Set OPENAI_API_KEY in .env'],
-                ['Anthropic', 'Claude 3.5, Claude 3', 'Set ANTHROPIC_API_KEY in .env'],
-                ['Google', 'Gemini Pro, Gemini 1.5', 'Set GOOGLE_API_KEY in .env'],
-                ['Ollama', 'Llama 3, Mistral, Phi', 'Install Ollama locally'],
-                ['DeepSeek', 'DeepSeek Chat, Coder', 'Set DEEPSEEK_API_KEY in .env'],
-                ['Qwen', 'Qwen 2, Qwen 1.5', 'Set QWEN_API_KEY in .env'],
-                ['Mistral', 'Mistral Large, Medium', 'Set MISTRAL_API_KEY in .env'],
-              ]}
-            />
-            <InfoCard title="Environment Configuration" variant="tip">
-              All API keys are read from the .env file on the backend. The frontend never exposes or stores API keys. Users can switch providers through the Workspace interface without touching configuration.
-            </InfoCard>
+            <div className="bg-gradient-to-br from-purple-50/50 to-accent-glow/30 rounded-xl p-5 border border-accent-primary/15">
+              <h4 className="text-sm font-bold text-text-primary mb-3">Available Models</h4>
+              <div className="grid gap-2">
+                {[
+                  { name: 'Llama 3.1 8B Instant', speed: '~200 tok/s', badge: 'Recommended' },
+                  { name: 'Llama 3.3 70B Versatile', speed: '~150 tok/s', badge: 'Most Powerful' },
+                  { name: 'Mixtral 8x7B', speed: '~180 tok/s', badge: '' },
+                  { name: 'Gemma 2 9B', speed: '~220 tok/s', badge: 'Lightning Fast' },
+                ].map((m) => (
+                  <div key={m.name} className="flex items-center justify-between px-4 py-2.5 rounded-lg bg-white/60 border border-border-primary">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-3.5 h-3.5 text-accent-primary" />
+                      <span className="text-sm font-medium text-text-primary">{m.name}</span>
+                      {m.badge && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-accent-glow text-accent-secondary font-semibold">{m.badge}</span>}
+                    </div>
+                    <span className="text-xs text-text-muted font-mono">{m.speed}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="mt-3">
+              <InfoCard title="How to Get Started" variant="tip">
+                1. Get your free API key at <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="text-accent-primary underline">console.groq.com/keys</a><br />
+                2. Add <code className="text-accent-primary font-mono">GROQ_API_KEY=your_key_here</code> to <code className="text-accent-primary font-mono">backend/.env</code><br />
+                3. Restart the backend server — no other configuration needed.
+              </InfoCard>
+            </div>
           </DocSection>
 
           {/* Evidence Timeline */}
