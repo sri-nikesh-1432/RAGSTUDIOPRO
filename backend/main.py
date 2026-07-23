@@ -99,7 +99,7 @@ try:
     # Run a quick encode to ensure model is fully initialized
     _warm_model.encode(['Warmup'], normalize_embeddings=True)
     _warm_time = (_time.time() - _warm_start) * 1000
-    print(f"[STARTUP] Embedding model loaded in {_warm_time:.0f}ms ✓")
+    print(f"[STARTUP] Embedding model loaded in {_warm_time:.0f}ms [OK]")
 except Exception as _warm_err:
     print(f"[STARTUP] Could not pre-warm embedding model: {_warm_err}")
     print("[STARTUP] Model will be loaded on first request (may cause delay)")
@@ -189,11 +189,12 @@ async def parse_uploaded_file(file: UploadFile = File(...)):
         with open(tmp_path, "wb") as f:
             f.write(content)
 
-        result = parse_file(tmp_path)
+        # Pass the original filename so we don't return the temp path name
+        result = parse_file(tmp_path, original_filename=file.filename or os.path.basename(tmp_path))
 
-        # Cache in session
+        # Cache in session using original filename
         if result.get("success"):
-            session_data["parsed_files"][file.filename] = result
+            session_data["parsed_files"][file.filename or result["file_name"]] = result
 
         return result
 
@@ -298,9 +299,10 @@ def _process_upload_background(job_id: str):
 
         job_manager.update_stage(job_id, "parsing")
 
-        # Parse the file
+        # Parse the file - pass original filename so parse_result has the real name, not temp path
         import gc as gc_module
-        parse_result = parse_file(tmp_path)
+        original_name = job.file_name  # The user's original filename, NOT the temp path
+        parse_result = parse_file(tmp_path, original_filename=original_name)
 
         if not parse_result.get("success"):
             job_manager.fail_job(job_id, parse_result.get("error", "Parse failed"))
@@ -975,6 +977,107 @@ async def pipeline_step_detail(run_id: str, step_id: str):
     if not data:
         raise HTTPException(status_code=404, detail="Step not found")
     return data
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  WEB SCRAPING (fetch & parse URL content in real-time)
+# ═══════════════════════════════════════════════════════════════════
+
+class WebScrapeRequest(BaseModel):
+    url: str
+    extract_metadata: bool = True
+
+@app.post("/api/scrape")
+async def scrape_url(request: WebScrapeRequest):
+    """Fetch and parse content from a URL for real-time RAG."""
+    import httpx
+    from bs4 import BeautifulSoup
+    
+    url = request.url.strip()
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            resp = await client.get(url, headers={
+                "User-Agent": "Mozilla/5.0 (compatible; RAGStudioPro/2.0)"
+            })
+            resp.raise_for_status()
+            
+        content_type = resp.headers.get("content-type", "").lower()
+        html = resp.text
+        
+        soup = BeautifulSoup(html, "html.parser")
+        
+        # Remove script, style, nav, footer elements
+        for tag in soup(["script", "style", "nav", "footer", "header", "aside", "noscript"]):
+            tag.decompose()
+            
+        title = soup.title.string.strip() if soup.title and soup.title.string else url
+        
+        # Extract main content
+        main = soup.find("main") or soup.find("article") or soup.find("body") or soup
+        text = main.get_text(separator="\n", strip=True)
+        
+        # Clean up whitespace
+        lines = [line.strip() for line in text.split("\n") if line.strip()]
+        clean_text = "\n".join(lines)
+        
+        metadata = {}
+        if request.extract_metadata:
+            # Extract metadata
+            meta_desc = soup.find("meta", attrs={"name": "description"})
+            if meta_desc and meta_desc.get("content"):
+                metadata["description"] = meta_desc["content"]
+                
+            meta_kw = soup.find("meta", attrs={"name": "keywords"})
+            if meta_kw and meta_kw.get("content"):
+                metadata["keywords"] = meta_kw["content"]
+                
+            og_image = soup.find("meta", property="og:image")
+            if og_image and og_image.get("content"):
+                metadata["og_image"] = og_image["content"]
+                
+            # Get all headings for structure
+            headings = []
+            for h in soup.find_all(["h1", "h2", "h3"]):
+                h_text = h.get_text(strip=True)
+                if h_text:
+                    headings.append({"level": h.name, "text": h_text})
+            metadata["headings"] = headings
+            
+        words = clean_text.split()
+        
+        return {
+            "success": True,
+            "url": url,
+            "title": title,
+            "text": clean_text,
+            "characters": len(clean_text),
+            "words": len(words),
+            "content_type": content_type,
+            "metadata": metadata,
+            "file_name": title[:50] + ".txt",
+        }
+        
+    except httpx.TimeoutException:
+        return {"success": False, "error": f"Request timed out for {url}"}
+    except httpx.HTTPStatusError as e:
+        return {"success": False, "error": f"HTTP {e.response.status_code} for {url}"}
+    except Exception as e:
+        return {"success": False, "error": f"Failed to scrape {url}: {str(e)}"}
+
+
+@app.get("/api/scrape/test")
+async def test_scrape():
+    """Quick connectivity test."""
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get("https://httpbin.org/get")
+        return {"success": True, "status": resp.status_code, "message": "Internet connection is working"}
+    except Exception as e:
+        return {"success": False, "error": str(e), "message": "No internet connection or DNS resolution failed"}
 
 
 # ═══════════════════════════════════════════════════════════════════

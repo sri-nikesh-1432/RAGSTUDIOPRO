@@ -105,7 +105,12 @@ export const useAppStore = create<AppState>((set) => ({
 
   // Parsed files
   parsedFiles: [],
-  addParsedFile: (f) => set((s) => ({ parsedFiles: [...s.parsedFiles, f] })),
+  addParsedFile: (f) => set((s) => ({
+    // Deduplicate: if a file with same name exists, replace it instead of adding duplicate
+    parsedFiles: s.parsedFiles.some(existing => existing.name === f.name)
+      ? s.parsedFiles.map(existing => existing.name === f.name ? f : existing)
+      : [...s.parsedFiles, f]
+  })),
   removeParsedFile: (name) => set((s) => ({ parsedFiles: s.parsedFiles.filter((f) => f.name !== name) })),
   clearParsedFiles: () => set({ parsedFiles: [] }),
 

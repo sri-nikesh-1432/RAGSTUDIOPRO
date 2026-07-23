@@ -363,6 +363,32 @@ function detectCategory(fileName: string): string {
   return 'text';
 }
 
+// ─── Web Scraping ──────────────────────────────────────────────────
+
+export interface ScrapeResult {
+  success: boolean;
+  url: string;
+  title: string;
+  text: string;
+  characters: number;
+  words: number;
+  content_type: string;
+  metadata: Record<string, any>;
+  file_name: string;
+  error?: string;
+}
+
+export const scrapeAPI = {
+  /** Fetch and parse content from a URL */
+  scrapeUrl: (url: string) =>
+    apiFetch<ScrapeResult>('/scrape', {
+      method: 'POST',
+      body: JSON.stringify({ url, extract_metadata: true }),
+    }),
+  testConnection: () =>
+    apiFetch<{ success: boolean; message: string }>('/scrape/test'),
+};
+
 // ─── Projects ──────────────────────────────────────────────────────
 
 export interface ProjectInfo {

@@ -556,16 +556,17 @@ def parse_binary(file_path: str) -> Tuple[str, Dict[str, Any]]:
 
 # ─── Main Parse Function ──────────────────────────────────────────
 
-def parse_file(file_path: str, extract_metadata: bool = True) -> Dict[str, Any]:
+def parse_file(file_path: str, extract_metadata: bool = True, original_filename: str = None) -> Dict[str, Any]:
     """
     Parse any supported file type and return text + metadata.
     This is the main entry point for file parsing.
+    ``original_filename``: the user's original filename (not the temp path).
     """
     if not os.path.exists(file_path):
         return {
             "success": False,
             "error": f"File not found: {file_path}",
-            "file_name": os.path.basename(file_path),
+            "file_name": original_filename or os.path.basename(file_path),
             "file_type": "unknown",
         }
 
@@ -597,7 +598,7 @@ def parse_file(file_path: str, extract_metadata: bool = True) -> Dict[str, Any]:
             return {
                 "success": True,
                 "text": text,
-                "file_name": os.path.basename(file_path),
+                "file_name": original_filename or os.path.basename(file_path),
                 "file_type": file_type,
                 "metadata": file_meta,
                 **_analyze_text(text),
@@ -605,15 +606,15 @@ def parse_file(file_path: str, extract_metadata: bool = True) -> Dict[str, Any]:
         except Exception:
             # Binary file or unreadable - extract filename info and return success
             ext = Path(file_path).suffix.lower() or ".unknown"
-            file_name = os.path.basename(file_path)
+            display_name = original_filename or os.path.basename(file_path)
             file_size = file_meta.get('file_size', 0)
             return {
                 "success": True,
-                "text": f"[Uploaded: {file_name} ({_human_size(file_size)}) - {ext} file]",
-                "file_name": file_name,
+                "text": f"[Uploaded: {display_name} ({_human_size(file_size)}) - {ext} file]",
+                "file_name": display_name,
                 "file_type": ext.lstrip('.').upper() if ext else 'BINARY',
                 "file_size": file_size,
-                "metadata": {**file_meta, "extension": ext, "note": f"File uploaded successfully: {file_name}"},
+                "metadata": {**file_meta, "extension": ext, "note": f"File uploaded successfully: {display_name}"},
                 "characters": file_size,
                 "words": 0,
             }
@@ -624,7 +625,7 @@ def parse_file(file_path: str, extract_metadata: bool = True) -> Dict[str, Any]:
     return {
         "success": bool(text),
         "text": text,
-        "file_name": os.path.basename(file_path),
+        "file_name": original_filename or os.path.basename(file_path),
         "file_type": file_type,
         "file_size": file_meta.get("file_size", 0),
         "metadata": {**file_meta, **type_metadata},

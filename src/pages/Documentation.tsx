@@ -41,15 +41,14 @@ const sections = [
   { id: 'faq', title: 'FAQ', icon: AlertCircle, category: 'Guide' },
 ];
 
-// ─── Expandable Section ──────────────────────────────────────────
-function DocSection({ id, title, icon: Icon, children, defaultOpen = false }: {
-  id: string; title: string; icon: any; children: React.ReactNode; defaultOpen?: boolean;
+// ─── Expandable Section (Accordion) ──────────────────────────────
+function DocSection({ id, title, icon: Icon, children, open, onToggle }: {
+  id: string; title: string; icon: any; children: React.ReactNode; open: boolean; onToggle: () => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
   return (
     <div id={id} className="border border-border-primary rounded-2xl overflow-hidden bg-bg-secondary">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={onToggle}
         className="w-full flex items-center gap-3 p-5 text-left hover:bg-bg-hover transition-colors"
       >
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent-primary/10 to-accent-dim/10 flex items-center justify-center shrink-0">
@@ -161,6 +160,11 @@ function ConceptCard({ title, children }: { title: string; children: React.React
 // ─── Main Documentation ──────────────────────────────────────────
 export default function Documentation() {
   const [activeSection, setActiveSection] = useState('about');
+  const [openSection, setOpenSection] = useState<string | null>('about');
+
+  const toggleSection = (id: string) => {
+    setOpenSection(prev => prev === id ? null : id);
+  };
 
   // Group sections by category for sidebar
   const categories = sections.reduce((acc, s) => {
@@ -172,7 +176,7 @@ export default function Documentation() {
   return (
     <div className="min-h-screen flex">
       {/* Sidebar Navigation */}
-      <aside className="hidden lg:block w-72 shrink-0 border-r border-border-primary bg-bg-secondary/50 h-screen sticky top-0 overflow-y-auto">
+      <aside className="hidden lg:block w-72 shrink-0 border-r border-border-primary bg-bg-secondary/50 h-screen sticky top-0 overflow-y-auto doc-content-scroll">
         <div className="p-4 border-b border-border-primary">
           <div className="flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-accent-primary" />
@@ -208,7 +212,7 @@ export default function Documentation() {
       </aside>
 
       {/* Content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto doc-content-scroll">
         {/* Header */}
         <div className="border-b border-border-primary bg-bg-secondary/50 backdrop-blur-sm sticky top-0 z-10">
           <div className="max-w-4xl mx-auto px-6 py-4">
@@ -222,7 +226,7 @@ export default function Documentation() {
           {/* ═══════════════════ APPLICATION ═══════════════════ */}
 
           {/* About RAG Studio Pro */}
-          <DocSection id="about" title="About RAG Studio Pro" icon={Sparkles} defaultOpen>
+          <DocSection id="about" title="About RAG Studio Pro" icon={Sparkles} open={openSection === 'about'} onToggle={() => toggleSection('about')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               <strong className="text-text-primary">RAG Studio Pro</strong> is a production-ready Multimodal Retrieval-Augmented Generation platform. It transforms any content — text, images, video, audio, documents, charts, diagrams — into a searchable knowledge base, then generates grounded, evidence-backed answers to your questions.
             </p>
@@ -263,7 +267,7 @@ export default function Documentation() {
           {/* ═══════════════════ FOUNDATIONS ═══════════════════ */}
 
           {/* AI & Machine Learning */}
-          <DocSection id="ai-fundamentals" title="AI & Machine Learning" icon={Atom}>
+          <DocSection id="ai-fundamentals" title="AI & Machine Learning" icon={Atom} open={openSection === 'ai-fundamentals'} onToggle={() => toggleSection('ai-fundamentals')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               <strong className="text-text-primary">Artificial Intelligence (AI)</strong> is the broad field of creating systems that can perform tasks requiring human-like intelligence — understanding language, recognizing images, making decisions, and learning from data.
             </p>
@@ -295,7 +299,7 @@ export default function Documentation() {
           </DocSection>
 
           {/* Deep Learning */}
-          <DocSection id="deep-learning" title="Deep Learning & Neural Networks" icon={Binary}>
+          <DocSection id="deep-learning" title="Deep Learning & Neural Networks" icon={Binary} open={openSection === 'deep-learning'} onToggle={() => toggleSection('deep-learning')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               <strong className="text-text-primary">Deep Learning</strong> uses artificial neural networks inspired by the human brain. Each "neuron" computes a weighted sum of its inputs, applies a non-linear activation function, and passes the result forward. Stacking millions of these neurons creates networks that can learn incredibly complex patterns.
             </p>
@@ -320,7 +324,7 @@ export default function Documentation() {
           </DocSection>
 
           {/* NLP */}
-          <DocSection id="nlp" title="Natural Language Processing" icon={MessageCircle}>
+          <DocSection id="nlp" title="Natural Language Processing" icon={MessageCircle} open={openSection === 'nlp'} onToggle={() => toggleSection('nlp')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               <strong className="text-text-primary">Natural Language Processing (NLP)</strong> is the branch of AI that deals with understanding, generating, and manipulating human language. RAG Studio Pro relies heavily on NLP for every stage: parsing documents, generating embeddings, retrieving relevant chunks, and generating answers.
             </p>
@@ -353,7 +357,7 @@ export default function Documentation() {
           </DocSection>
 
           {/* LLMs */}
-          <DocSection id="llms" title="Large Language Models" icon={Cpu}>
+          <DocSection id="llms" title="Large Language Models" icon={Cpu} open={openSection === 'llms'} onToggle={() => toggleSection('llms')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               <strong className="text-text-primary">Large Language Models (LLMs)</strong> are neural networks trained on trillions of tokens of text data. They learn to predict the next token in a sequence, which gives them remarkable abilities: answering questions, writing code, translating languages, reasoning about concepts, and generating creative content.
             </p>
@@ -389,7 +393,7 @@ export default function Documentation() {
           </DocSection>
 
           {/* Transformers */}
-          <DocSection id="transformers" title="Transformers & Attention" icon={Settings}>
+          <DocSection id="transformers" title="Transformers & Attention" icon={Settings} open={openSection === 'transformers'} onToggle={() => toggleSection('transformers')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               The <strong className="text-text-primary">Transformer architecture</strong> (introduced in "Attention Is All You Need," 2017) is the foundation of all modern LLMs and embedding models. Its key innovation — the <strong className="text-text-primary">self-attention mechanism</strong> — allows the model to weigh the importance of every word relative to every other word in a sequence.
             </p>
@@ -419,7 +423,7 @@ export default function Documentation() {
           </DocSection>
 
           {/* Tokenization */}
-          <DocSection id="tokenization" title="Tokenization" icon={Layers}>
+          <DocSection id="tokenization" title="Tokenization" icon={Layers} open={openSection === 'tokenization'} onToggle={() => toggleSection('tokenization')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               <strong className="text-text-primary">Tokenization</strong> is the process of breaking text into smaller units (tokens) that models can process. LLMs and embedding models don't work with raw characters — they work with tokens, which can be words, subwords, or characters.
             </p>
@@ -443,7 +447,7 @@ export default function Documentation() {
           {/* ═══════════════════ CORE CONCEPTS ═══════════════════ */}
 
           {/* What is RAG */}
-          <DocSection id="what-is-rag" title="What is RAG?" icon={Zap}>
+          <DocSection id="what-is-rag" title="What is RAG?" icon={Zap} open={openSection === 'what-is-rag'} onToggle={() => toggleSection('what-is-rag')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               <strong className="text-text-primary">Retrieval-Augmented Generation (RAG)</strong> is an AI architecture that combines information retrieval with text generation. Instead of relying solely on an LLM's trained knowledge, RAG retrieves relevant documents from an external knowledge base and uses them as context for generating answers.
             </p>
@@ -477,7 +481,7 @@ export default function Documentation() {
           </DocSection>
 
           {/* The Pipeline */}
-          <DocSection id="pipeline" title="The RAG Pipeline" icon={Layers}>
+          <DocSection id="pipeline" title="The RAG Pipeline" icon={Layers} open={openSection === 'pipeline'} onToggle={() => toggleSection('pipeline')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               A RAG pipeline transforms raw content into searchable knowledge and generates answers grounded in that knowledge.
             </p>
@@ -492,7 +496,7 @@ export default function Documentation() {
           </DocSection>
 
           {/* Multimodal RAG */}
-          <DocSection id="multimodal-rag" title="Multimodal RAG" icon={Globe}>
+          <DocSection id="multimodal-rag" title="Multimodal RAG" icon={Globe} open={openSection === 'multimodal-rag'} onToggle={() => toggleSection('multimodal-rag')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               Traditional RAG only handles text. <strong className="text-text-primary">Multimodal RAG</strong> extends this to images, video, audio, charts, tables, and diagrams — enabling you to ask questions across all content types and receive the most appropriate output modality.
             </p>
@@ -514,7 +518,7 @@ export default function Documentation() {
           {/* ═══════════════════ PIPELINE ═══════════════════ */}
 
           {/* Ingestion */}
-          <DocSection id="ingestion" title="Ingestion" icon={FileText}>
+          <DocSection id="ingestion" title="Ingestion" icon={FileText} open={openSection === 'ingestion'} onToggle={() => toggleSection('ingestion')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               Ingestion is the process of parsing uploaded content into structured, searchable data. RAG Studio Pro supports 25+ input formats across all modalities.
             </p>
@@ -538,7 +542,7 @@ export default function Documentation() {
           </DocSection>
 
           {/* Chunking */}
-          <DocSection id="chunking" title="Chunking & Overlap" icon={Layers}>
+          <DocSection id="chunking" title="Chunking & Overlap" icon={Layers} open={openSection === 'chunking'} onToggle={() => toggleSection('chunking')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               Chunking splits parsed content into manageable pieces for embedding. Chunk size and overlap directly affect retrieval quality. <strong className="text-text-primary">Chunk overlap</strong> ensures no context is lost at chunk boundaries — a sentence split across two chunks is partially repeated in both.
             </p>
@@ -563,7 +567,7 @@ export default function Documentation() {
           </DocSection>
 
           {/* Embeddings */}
-          <DocSection id="embeddings" title="Embeddings" icon={Brain}>
+          <DocSection id="embeddings" title="Embeddings" icon={Brain} open={openSection === 'embeddings'} onToggle={() => toggleSection('embeddings')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               Embeddings are dense vector representations that capture the semantic meaning of content. Similar content produces similar vectors. This is the mathematical foundation that makes semantic search possible.
             </p>
@@ -587,7 +591,7 @@ export default function Documentation() {
           </DocSection>
 
           {/* Vector Stores */}
-          <DocSection id="vector-stores" title="Vector Databases" icon={Database}>
+          <DocSection id="vector-stores" title="Vector Databases" icon={Database} open={openSection === 'vector-stores'} onToggle={() => toggleSection('vector-stores')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               Vector databases store, index, and query high-dimensional vectors efficiently. They enable fast similarity search across millions of embeddings — finding the nearest vectors in milliseconds.
             </p>
@@ -610,7 +614,7 @@ export default function Documentation() {
           </DocSection>
 
           {/* Cosine Similarity */}
-          <DocSection id="similarity" title="Cosine Similarity & Search" icon={Search}>
+          <DocSection id="similarity" title="Cosine Similarity & Search" icon={Search} open={openSection === 'similarity'} onToggle={() => toggleSection('similarity')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               <strong className="text-text-primary">Cosine similarity</strong> measures the angle between two vectors, ignoring their magnitude. This makes it ideal for comparing embeddings — two documents about the same topic will have similar vectors regardless of length.
             </p>
@@ -637,7 +641,7 @@ def cosine_similarity(a, b):
           </DocSection>
 
           {/* Retrieval */}
-          <DocSection id="retrieval" title="Retrieval Strategies" icon={Search}>
+          <DocSection id="retrieval" title="Retrieval Strategies" icon={Search} open={openSection === 'retrieval'} onToggle={() => toggleSection('retrieval')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               When a user asks a question, the retriever generates a query embedding, searches the vector database, and returns the Top-K most relevant chunks.
             </p>
@@ -662,7 +666,7 @@ def cosine_similarity(a, b):
           </DocSection>
 
           {/* Generation */}
-          <DocSection id="generation" title="Generation" icon={MessageSquare}>
+          <DocSection id="generation" title="Generation" icon={MessageSquare} open={openSection === 'generation'} onToggle={() => toggleSection('generation')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               The generation step takes retrieved context, constructs a prompt, sends it to the selected LLM, and produces a grounded answer with evidence sources.
             </p>
@@ -679,7 +683,7 @@ def cosine_similarity(a, b):
           {/* ═══════════════════ ADVANCED ═══════════════════ */}
 
           {/* Prompt Engineering */}
-          <DocSection id="prompt-engineering" title="Prompt Engineering" icon={Lightbulb}>
+          <DocSection id="prompt-engineering" title="Prompt Engineering" icon={Lightbulb} open={openSection === 'prompt-engineering'} onToggle={() => toggleSection('prompt-engineering')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               <strong className="text-text-primary">Prompt engineering</strong> is the art of crafting instructions that guide LLMs to produce desired outputs. In RAG, the prompt must combine the user's question with retrieved context in a way that produces accurate, grounded answers.
             </p>
@@ -709,7 +713,7 @@ User Question: {query}`} />
           </DocSection>
 
           {/* Hallucinations */}
-          <DocSection id="hallucinations" title="Hallucinations & Context Windows" icon={Shield}>
+          <DocSection id="hallucinations" title="Hallucinations & Context Windows" icon={Shield} open={openSection === 'hallucinations'} onToggle={() => toggleSection('hallucinations')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               <strong className="text-text-primary">Hallucination</strong> occurs when an LLM generates plausible but factually incorrect information. This is the #1 problem RAG solves — by grounding the model in real retrieved documents.
             </p>
@@ -731,7 +735,7 @@ User Question: {query}`} />
           </DocSection>
 
           {/* Speech RAG */}
-          <DocSection id="speech-rag" title="Speech RAG" icon={Headphones}>
+          <DocSection id="speech-rag" title="Speech RAG" icon={Headphones} open={openSection === 'speech-rag'} onToggle={() => toggleSection('speech-rag')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               Speech RAG extends RAG to audio content. When audio or video is uploaded, the system transcribes speech, detects speakers, generates timestamps, and creates searchable embeddings.
             </p>
@@ -748,7 +752,7 @@ User Question: {query}`} />
           </DocSection>
 
           {/* Vision RAG */}
-          <DocSection id="vision-rag" title="Vision RAG" icon={Eye}>
+          <DocSection id="vision-rag" title="Vision RAG" icon={Eye} open={openSection === 'vision-rag'} onToggle={() => toggleSection('vision-rag')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               Vision RAG enables retrieval and understanding of visual content — images, charts, diagrams, video frames, and scanned documents.
             </p>
@@ -773,7 +777,7 @@ User Question: {query}`} />
           </DocSection>
 
           {/* Graph RAG */}
-          <DocSection id="graph-rag" title="Graph RAG" icon={Network}>
+          <DocSection id="graph-rag" title="Graph RAG" icon={Network} open={openSection === 'graph-rag'} onToggle={() => toggleSection('graph-rag')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               Graph RAG uses knowledge graphs to enhance retrieval by modeling entities and their relationships as graph structures, enabling multi-hop reasoning.
             </p>
@@ -790,7 +794,7 @@ User Question: {query}`} />
           </DocSection>
 
           {/* Agentic RAG */}
-          <DocSection id="agentic-rag" title="Agentic RAG" icon={Cpu}>
+          <DocSection id="agentic-rag" title="Agentic RAG" icon={Cpu} open={openSection === 'agentic-rag'} onToggle={() => toggleSection('agentic-rag')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               Agentic RAG systems use autonomous agents that plan retrieval strategies, decide which tools to use, and iteratively refine their approach based on intermediate results.
             </p>
@@ -806,7 +810,7 @@ User Question: {query}`} />
           </DocSection>
 
           {/* Evaluation Metrics */}
-          <DocSection id="metrics" title="Evaluation Metrics" icon={Gauge}>
+          <DocSection id="metrics" title="Evaluation Metrics" icon={Gauge} open={openSection === 'metrics'} onToggle={() => toggleSection('metrics')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               Evaluating RAG system quality requires measuring both retrieval accuracy and generation quality. RAG Studio Pro tracks these metrics live across every pipeline run.
             </p>
@@ -838,7 +842,7 @@ User Question: {query}`} />
           {/* ═══════════════════ CONFIGURATION ═══════════════════ */}
 
           {/* LLM Providers */}
-          <DocSection id="providers" title="Groq Cloud" icon={Zap}>
+          <DocSection id="providers" title="Groq Cloud" icon={Zap} open={openSection === 'providers'} onToggle={() => toggleSection('providers')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               RAG Studio Pro uses <strong className="text-text-primary">GroqCloud</strong> for lightning-fast LLM inference. Just set your <code className="text-accent-primary font-mono">GROQ_API_KEY</code> in the backend <code className="text-accent-primary font-mono">.env</code> file and you're ready to go.
             </p>
@@ -872,7 +876,7 @@ User Question: {query}`} />
           </DocSection>
 
           {/* Evidence Timeline */}
-          <DocSection id="evidence" title="Evidence Timeline" icon={Target}>
+          <DocSection id="evidence" title="Evidence Timeline" icon={Target} open={openSection === 'evidence'} onToggle={() => toggleSection('evidence')}>
             <p className="text-sm text-text-secondary leading-relaxed">
               Every answer in RAG Studio Pro includes an Evidence Timeline — a verifiable list of sources that the model used to generate its response.
             </p>
@@ -903,7 +907,7 @@ User Question: {query}`} />
           {/* ═══════════════════ GUIDE ═══════════════════ */}
 
           {/* Best Practices */}
-          <DocSection id="best-practices" title="Best Practices" icon={Shield}>
+          <DocSection id="best-practices" title="Best Practices" icon={Shield} open={openSection === 'best-practices'} onToggle={() => toggleSection('best-practices')}>
             <div className="space-y-3">
               <div className="bg-bg-elevated rounded-xl p-4 border border-border-primary">
                 <h5 className="text-sm font-semibold text-text-primary mb-1">Chunk Size Matters</h5>
@@ -933,7 +937,7 @@ User Question: {query}`} />
           </DocSection>
 
           {/* FAQ */}
-          <DocSection id="faq" title="FAQ" icon={AlertCircle}>
+          <DocSection id="faq" title="FAQ" icon={AlertCircle} open={openSection === 'faq'} onToggle={() => toggleSection('faq')}>
             <div className="space-y-4">
               {[
                 { q: 'Do I need API keys to use RAG Studio Pro?', a: 'No. The backend reads all secrets from the .env file. With Ollama running locally, you can use it entirely offline with open-source models.' },
