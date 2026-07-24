@@ -9,17 +9,19 @@ interface ResetDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onReset: (options: ResetOptions) => void;
+  variant?: 'reset' | 'new-project';
 }
 
-export function ResetDialog({ isOpen, onClose, onReset }: ResetDialogProps) {
-  const [options, setOptions] = useState<ResetOptions>({
+export function ResetDialog({ isOpen, onClose, onReset, variant = 'reset' }: ResetDialogProps) {
+  const isNewProject = variant === 'new-project';
+  const [options, setOptions] = useState<ResetOptions>(() => ({
     resetPipeline: true,
-    removeFiles: false,
-    clearVectors: false,
-    clearChat: false,
-    clearOutputs: false,
-    resetEverything: false,
-  });
+    removeFiles: variant === 'new-project',
+    clearVectors: variant === 'new-project',
+    clearChat: variant === 'new-project',
+    clearOutputs: variant === 'new-project',
+    resetEverything: variant === 'new-project',
+  }));
 
   const handleToggle = (key: keyof ResetOptions | 'resetEverything') => {
     if (key === 'resetEverything') {
@@ -75,12 +77,12 @@ export function ResetDialog({ isOpen, onClose, onReset }: ResetDialogProps) {
               {/* Header */}
               <div className="flex items-center justify-between p-5 border-b border-border-primary">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
-                    <AlertTriangle className="w-5 h-5 text-red-500" />
+                  <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', isNewProject ? 'bg-accent-primary/10' : 'bg-red-500/10')}>
+                    <RefreshCcw className={cn('w-5 h-5', isNewProject ? 'text-accent-primary' : 'text-red-500')} />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-text-primary">Reset Workspace</h3>
-                    <p className="text-xs text-text-muted">Select what to reset</p>
+                    <h3 className="text-base font-bold text-text-primary">{isNewProject ? 'Start New Project' : 'Reset Workspace'}</h3>
+                    <p className="text-xs text-text-muted">{isNewProject ? 'This will clear all current data and start fresh' : 'Select what to reset'}</p>
                   </div>
                 </div>
                 <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-bg-hover transition-all">
@@ -146,10 +148,13 @@ export function ResetDialog({ isOpen, onClose, onReset }: ResetDialogProps) {
                   Cancel
                 </button>
                 <button onClick={() => onReset(options)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium hover:shadow-lg hover:shadow-red-500/25 transition-all"
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-medium hover:shadow-lg transition-all',
+                    isNewProject ? 'bg-gradient-to-r from-accent-primary to-accent-dim hover:shadow-accent-primary/25' : 'bg-gradient-to-r from-red-500 to-red-600 hover:shadow-red-500/25'
+                  )}
                 >
                   <RefreshCcw className="w-4 h-4" />
-                  Reset
+                  {isNewProject ? 'Start Fresh' : 'Reset'}
                 </button>
               </div>
             </div>

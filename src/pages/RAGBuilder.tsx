@@ -1,15 +1,16 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import {
   Upload, FileText, Layers, Brain, Database, Search, MessageSquare,
   CheckCircle2, AlertCircle, Zap, X, RefreshCcw, Save, FolderOpen,
-  BarChart3, Target, Trash2, Globe, Key, ChevronLeft, ChevronRight,
-  Download
+  BarChart3, Trash2, Globe, Key, ChevronLeft, ChevronRight,
+  Download, Plus, Clock
 } from 'lucide-react';
 import { cn, formatNumber } from '../lib/utils';
 import { useAppStore } from '../store/appStore';
 import {
-  parseAPI, chunkAPI, embedAPI, vectorAPI, retrieveAPI, llmAPI, healthAPI, uploadAPI, scrapeAPI
+  parseAPI, chunkAPI, embedAPI, vectorAPI, retrieveAPI, llmAPI, healthAPI, uploadAPI, scrapeAPI, projectAPI
 } from '../services/api';
 import { PipelineTimeline, PIPELINE_STEPS } from './workspace/PipelineTimeline';
 import { LeftSidebar } from './workspace/LeftSidebar';
@@ -102,6 +103,13 @@ function ErrorBanner({ error, onDismiss, onRetry, onSkip, onGoBack }: {
               Go Back
             </button>
           )}
+          <button onClick={() => {
+            // Navigate to the current step so user can edit its parameters
+            // This dismisses the error and lets the user tweak settings
+            onDismiss();
+          }} className="px-2.5 py-1 rounded-lg bg-bg-elevated text-[10px] font-medium text-text-secondary hover:text-text-primary border border-border-primary transition-all">
+            Edit Parameters
+          </button>
         </div>
       </div>
       <button onClick={onDismiss} className="p-1 hover:bg-red-500/10 rounded-lg transition-all shrink-0">
@@ -130,6 +138,7 @@ export default function RAGBuilder() {
   const [uploadProgress, setUploadProgress] = useState<string>('');
   const [uploadingCategory, setUploadingCategory] = useState<FileCategory | null>(null);
   const [showResetDialog, setShowResetDialog] = useState(false);
+  const [resetDialogVariant, setResetDialogVariant] = useState<'reset' | 'new-project'>('reset');
   const [stepTimings, setStepTimings] = useState<Record<string, number>>({});
   const [pipelineStatus, setPipelineStatus] = useState('idle');
   const [pipelineProgress, setPipelineProgress] = useState(0);
@@ -137,6 +146,7 @@ export default function RAGBuilder() {
   const textInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   // ─── Completion States ──────────────────────────────────────
   const completedSteps = new Set([
@@ -435,6 +445,82 @@ export default function RAGBuilder() {
 
   const isFirstStep = activeStep === 0;
   const isLastStep = activeStep === PIPELINE_STEPS.length - 1;
+
+  // ─── Project Management ─────────────────────────────────────
+  const handleSaveProject = async () => {
+    try {
+      await projectAPI.create('workspace_' + Date.now(), `Saved at ${new Date().toLocaleString()}`);
+      toast.success('Project saved successfully');
+    } catch (err: any) {
+      toast.error('Failed to save project: ' + err.message);
+    }
+  };
+
+  const handleOpenProject = async () => {
+    try {
+      const projects = await projectAPI.list();
+      if (projects.projects.length > 0) {
+        const latest = projects.projects[0];
+        const loaded = await projectAPI.get(latest.name);
+        if (loaded.success) {
+          toast.success(`Opened project: ${latest.name}`);
+        }
+      } else {
+        toast.error('No saved projects found');
+      }
+    } catch (err: any) {
+      toast.error('Failed to open project: ' + err.message);
+    }
+  };
+
+  const handleExportProject = async () => {
+    try {
+      // Build a JSON snapshot of the current workspace state
+      const snapshot = {
+        name: 'workspace_export_' + Date.now(),
+        exportedAt: new Date().toISOString(),
+        parsedFiles: store.parsedFiles.map((f: any) => ({
+          name: f.name,
+          type: f.type,
+          size: f.size,
+          words: f.words,
+          characters: f.characters,
+          pages: f.pages,
+          language: f.language,
+        })),
+        currentText: store.currentText.substring(0, 5000), // preview
+        textLength: store.currentText.length,
+        chunkMethod: store.chunkMethod,
+        chunkSize: store.chunkSize,
+        chunkOverlap: store.chunkOverlap,
+        embeddingModel: store.embeddingModel,
+        vectorStore: store.vectorStore,
+        collectionName: store.collectionName,
+        llmProvider: store.llmProvider,
+        llmModel: store.llmModel,
+        totalVectors: store.totalVectors,
+        totalQueries: store.totalQueries,
+        chunks: store.chunks.length,
+      };
+      const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `rag-studio-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Project exported as JSON');
+    } catch (err: any) {
+      toast.error('Failed to export project: ' + err.message);
+    }
+  };
+
+  const handleStartNewProject = () => {
+    setResetDialogVariant('new-project');
+    setShowResetDialog(true);
+  };
 
 
   // ─── Render Step Content ─────────────────────────────────────
@@ -848,15 +934,51 @@ export default function RAGBuilder() {
             </div>
             {/* Project Actions */}
             <div className="flex items-center gap-1.5 ml-4 pl-4 border-l border-border-primary">
-              <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-hover border border-transparent hover:border-border-primary transition-all">
+              <button onClick={handleSaveProject}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-hover border border-transparent hover:border-border-primary transition-all">
                 <Save className="w-3 h-3" /> Save
               </button>
-              <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-hover border border-transparent hover:border-border-primary transition-all">
+              <button onClick={handleOpenProject}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-hover border border-transparent hover:border-border-primary transition-all">
                 <FolderOpen className="w-3 h-3" /> Open
               </button>
-              <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-hover border border-transparent hover:border-border-primary transition-all">
+              <button onClick={handleExportProject}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-hover border border-transparent hover:border-border-primary transition-all">
                 <Download className="w-3 h-3" /> Export
               </button>
+              <div className="w-px h-4 bg-border-primary mx-1" />
+              <button onClick={handleStartNewProject}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-medium text-accent-primary hover:text-accent-secondary hover:bg-accent-glow border border-transparent hover:border-accent-primary/20 transition-all">
+                <Plus className="w-3 h-3" /> New Project
+              </button>
+              <button onClick={() => importInputRef.current?.click()}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-hover border border-transparent hover:border-border-primary transition-all">
+                <FolderOpen className="w-3 h-3" /> Import
+              </button>
+              <input ref={importInputRef} type="file" accept=".json" className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    try {
+                      const data = JSON.parse(ev.target?.result as string);
+                      if (data.collectionName) store.setCollectionName(data.collectionName);
+                      if (data.chunkMethod) store.setChunkMethod(data.chunkMethod);
+                      if (data.chunkSize) store.setChunkSize(data.chunkSize);
+                      if (data.chunkOverlap !== undefined) store.setChunkOverlap(data.chunkOverlap);
+                      if (data.embeddingModel) store.setEmbeddingModel(data.embeddingModel);
+                      if (data.vectorStore) store.setVectorStore(data.vectorStore);
+                      if (data.llmProvider) store.setLlmProvider(data.llmProvider);
+                      if (data.llmModel) store.setLlmModel(data.llmModel);
+                      toast.success(`Project imported: ${data.name || 'workspace'}`);
+                    } catch (parseErr: any) {
+                      toast.error('Invalid project file: ' + parseErr.message);
+                    }
+                  };
+                  reader.readAsText(file);
+                  e.target.value = '';
+                }} />
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -869,7 +991,7 @@ export default function RAGBuilder() {
             </div>
             <motion.button
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-              onClick={() => setShowResetDialog(true)}
+              onClick={() => { setResetDialogVariant('reset'); setShowResetDialog(true); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all border border-red-500/20"
             >
               <RefreshCcw className="w-3 h-3" />
@@ -910,6 +1032,8 @@ export default function RAGBuilder() {
           activeStep={activeStep}
           completedSteps={completedSteps}
           buildComplete={buildComplete}
+          onClearCurrentText={() => { store.setCurrentText(''); }}
+          onStartNewProject={handleStartNewProject}
         />
 
         {/* Center Workspace */}
@@ -931,7 +1055,12 @@ export default function RAGBuilder() {
                   <p className="text-[10px] text-text-muted">{PIPELINE_STEPS[activeStep].label}</p>
                 </div>
               </div>
-              <span className="text-[10px] text-text-muted font-medium">Step {activeStep + 1} of {PIPELINE_STEPS.length}</span>
+              <div className="flex items-center gap-2 text-[10px] text-text-muted">
+            <Clock className="w-3 h-3" />
+            <span>~ {PIPELINE_STEPS[activeStep].estimate}</span>
+            <span className="w-px h-3 bg-border-primary" />
+            <span>Step {activeStep + 1} of {PIPELINE_STEPS.length}</span>
+          </div>
             </div>
           </div>
 
@@ -1012,9 +1141,11 @@ export default function RAGBuilder() {
 
       {/* Reset Dialog */}
       <ResetDialog
+        key={resetDialogVariant + String(showResetDialog)}
         isOpen={showResetDialog}
         onClose={() => setShowResetDialog(false)}
         onReset={handleReset}
+        variant={resetDialogVariant}
       />
     </div>
   );

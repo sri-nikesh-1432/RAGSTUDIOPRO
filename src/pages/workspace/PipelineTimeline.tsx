@@ -7,13 +7,13 @@ import { cn } from '../../lib/utils';
 
 // ─── Pipeline Step Definitions ──────────────────────────────────
 export const PIPELINE_STEPS: PipelineStepDef[] = [
-  { id: 0, name: 'Ingestion', icon: Upload, color: 'from-blue-500 to-cyan-500', label: 'Upload documents, audio, video, or paste text' },
-  { id: 1, name: 'Chunking', icon: Layers, color: 'from-cyan-500 to-teal-500', label: 'Split content into searchable chunks' },
-  { id: 2, name: 'Embeddings', icon: Brain, color: 'from-teal-500 to-emerald-500', label: 'Convert chunks into dense vector embeddings' },
-  { id: 3, name: 'Vector Store', icon: Database, color: 'from-emerald-500 to-green-500', label: 'Store embeddings for fast similarity search' },
-  { id: 4, name: 'Retrieval', icon: Search, color: 'from-green-500 to-lime-500', label: 'Search the vector database for relevant chunks' },
-  { id: 5, name: 'Generation', icon: MessageSquare, color: 'from-lime-500 to-yellow-500', label: 'Generate grounded answers using LLM' },
-  { id: 6, name: 'Analytics', icon: BarChart3, color: 'from-yellow-500 to-orange-500', label: 'View pipeline performance metrics' },
+  { id: 0, name: 'Ingestion', icon: Upload, color: 'from-blue-500 to-cyan-500', label: 'Upload documents, audio, video, or paste text', estimate: '1-2 min' },
+  { id: 1, name: 'Chunking', icon: Layers, color: 'from-cyan-500 to-teal-500', label: 'Split content into searchable chunks', estimate: '< 1 sec' },
+  { id: 2, name: 'Embeddings', icon: Brain, color: 'from-teal-500 to-emerald-500', label: 'Convert chunks into dense vector embeddings', estimate: '5-30 sec' },
+  { id: 3, name: 'Vector Store', icon: Database, color: 'from-emerald-500 to-green-500', label: 'Store embeddings for fast similarity search', estimate: '< 1 sec' },
+  { id: 4, name: 'Retrieval', icon: Search, color: 'from-green-500 to-lime-500', label: 'Search the vector database for relevant chunks', estimate: '< 1 sec' },
+  { id: 5, name: 'Generation', icon: MessageSquare, color: 'from-lime-500 to-yellow-500', label: 'Generate grounded answers using LLM', estimate: '1-5 sec' },
+  { id: 6, name: 'Analytics', icon: BarChart3, color: 'from-yellow-500 to-orange-500', label: 'View pipeline performance metrics', estimate: '< 1 sec' },
 ];
 
 export interface PipelineStepDef {
@@ -22,6 +22,7 @@ export interface PipelineStepDef {
   icon: any;
   color: string;
   label: string;
+  estimate: string;
 }
 
 // ─── Pipeline Timeline ──────────────────────────────────────────
